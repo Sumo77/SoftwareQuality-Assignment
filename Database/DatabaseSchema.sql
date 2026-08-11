@@ -86,16 +86,10 @@ CREATE TABLE Loans (
 	LoanID          INTEGER PRIMARY KEY AUTOINCREMENT,
 	BookID          INTEGER NOT NULL,
 	MemberID        INTEGER NOT NULL,
-	LoanDate        TEXT NOT NULL DEFAULT (date('now')),
+	LoanDate        TEXT NOT NULL,
 	DueDate         TEXT NOT NULL,
 	ReturnDate      TEXT,
 	ReturnCondition TEXT,
-	IsOverdue       INTEGER AS (
-		CASE 
-			WHEN ReturnDate IS NULL AND date('now') > date(DueDate) THEN 1
-			ELSE 0
-		END
-	) STORED,
 	FOREIGN KEY (BookID) REFERENCES Books(BookID) ON DELETE RESTRICT,
 	FOREIGN KEY (MemberID) REFERENCES Accounts(AccountID) ON DELETE RESTRICT
 );
@@ -125,15 +119,9 @@ CREATE TABLE Reservations (
 	ReservationID   INTEGER PRIMARY KEY AUTOINCREMENT,
 	BookID          INTEGER NOT NULL,
 	MemberID        INTEGER NOT NULL,
-	ReservationDate TEXT NOT NULL DEFAULT (date('now')),
+	ReservationDate TEXT NOT NULL,
 	FulfilledDate   TEXT,
 	NotifiedDate    TEXT,
-	IsActive        INTEGER AS (
-		CASE 
-			WHEN FulfilledDate IS NULL THEN 1
-			ELSE 0
-		END
-	) STORED,
 	FOREIGN KEY (BookID) REFERENCES Books(BookID) ON DELETE RESTRICT,
 	FOREIGN KEY (MemberID) REFERENCES Accounts(AccountID) ON DELETE RESTRICT
 );

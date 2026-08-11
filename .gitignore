@@ -110,6 +110,11 @@ ipch/
 *.sdf
 *.cachefile
 *.VC.db
+
+# SQLite local database files (generated locally, not committed)
+*.db
+*.db-shm
+*.db-wal
 *.VC.VC.opendb
 
 # Visual Studio profiler
