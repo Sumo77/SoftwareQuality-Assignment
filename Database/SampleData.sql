@@ -4,16 +4,16 @@
 
 -- Member Accounts (5 members)
 INSERT INTO Accounts (Username, PasswordHash, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate) VALUES
-('alice.member', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', 'Member', 'Alice', 'Johnson', 'alice.johnson@email.com', '555-0101', '2024-06-17 10:00:00'),
-('bob.member', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', 'Member', 'Bob', 'Smith', 'bob.smith@email.com', '555-0102', '2024-09-15 11:00:00'),
-('carol.member', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', 'Member', 'Carol', 'Williams', 'carol.williams@email.com', '555-0103', '2024-10-30 12:00:00'),
-('david.member', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', 'Member', 'David', 'Brown', 'david.brown@email.com', '555-0104', '2024-11-14 13:00:00'),
-('emma.member', '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8', 'Member', 'Emma', 'Davis', 'emma.davis@email.com', '555-0105', '2024-11-29 14:00:00');
+('alice.member', '5600376e863d2f57a053518f324ad3840b0bc2348b573af281a7b7cbe7a228c6', 'Member', 'Alice', 'Johnson', 'alice.johnson@email.com', '555-0101', '2024-06-17 10:00:00'),
+('bob.member', '5600376e863d2f57a053518f324ad3840b0bc2348b573af281a7b7cbe7a228c6', 'Member', 'Bob', 'Smith', 'bob.smith@email.com', '555-0102', '2024-09-15 11:00:00'),
+('carol.member', '5600376e863d2f57a053518f324ad3840b0bc2348b573af281a7b7cbe7a228c6', 'Member', 'Carol', 'Williams', 'carol.williams@email.com', '555-0103', '2024-10-30 12:00:00'),
+('david.member', '5600376e863d2f57a053518f324ad3840b0bc2348b573af281a7b7cbe7a228c6', 'Member', 'David', 'Brown', 'david.brown@email.com', '555-0104', '2024-11-14 13:00:00'),
+('emma.member', '5600376e863d2f57a053518f324ad3840b0bc2348b573af281a7b7cbe7a228c6', 'Member', 'Emma', 'Davis', 'emma.davis@email.com', '555-0105', '2024-11-29 14:00:00');
 
 -- Staff Accounts (2 staff)
 INSERT INTO Accounts (Username, PasswordHash, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate) VALUES
-('jane.staff', '0b14d501a594442a01c6859541bcb3e8164d183d32937b851835442f69d5c94e', 'Staff', 'Jane', 'Anderson', 'jane.anderson@library.org', '555-0201', '2023-12-14 10:00:00'),
-('mike.staff', '0b14d501a594442a01c6859541bcb3e8164d183d32937b851835442f69d5c94e', 'Staff', 'Mike', 'Thompson', 'mike.thompson@library.org', '555-0202', '2024-05-28 11:00:00');
+('jane.staff', '8f5dada329d6ade1fdba5e207b5a81b312ae838801ca287a00e9428620808dce', 'Staff', 'Jane', 'Anderson', 'jane.anderson@library.org', '555-0201', '2023-12-14 10:00:00'),
+('mike.staff', '8f5dada329d6ade1fdba5e207b5a81b312ae838801ca287a00e9428620808dce', 'Staff', 'Mike', 'Thompson', 'mike.thompson@library.org', '555-0202', '2024-05-28 11:00:00');
 
 -- Books - Fiction (Available)
 INSERT INTO Books (ISBN, Title, Author, Publisher, PublicationYear, Genre, Status, Description) VALUES
