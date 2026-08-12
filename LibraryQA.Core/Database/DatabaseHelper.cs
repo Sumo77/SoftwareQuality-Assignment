@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 
-namespace SoftwareQuality_Assignment1.Database
+namespace LibraryQA.Core.Database
 {
     /// <summary>
     /// Provides data access methods for the Library Management System.

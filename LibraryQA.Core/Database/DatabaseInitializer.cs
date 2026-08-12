@@ -2,7 +2,7 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.IO;
 
-namespace SoftwareQuality_Assignment1.Database
+namespace LibraryQA.Core.Database
 {
     /// <summary>
     /// Handles database initialization and schema creation for the Library Management System.

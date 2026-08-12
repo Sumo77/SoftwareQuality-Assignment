@@ -12,4 +12,10 @@
     <ProjectReference Include="..\LibraryQA.Core\LibraryQA.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+	<Content Include="..\Database\*.sql" Link="Database\%(Filename)%(Extension)">
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	</Content>
+  </ItemGroup>
+
 </Project>
