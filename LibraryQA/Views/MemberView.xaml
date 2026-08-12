@@ -1,0 +1,74 @@
+<UserControl x:Class="LibraryQA.Views.MemberView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="500" d:DesignWidth="700">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#2E5D9F" Padding="12">
+            <Grid>
+                <TextBlock Text="Member Dashboard" Foreground="White" FontSize="18"
+                           FontWeight="Bold" VerticalAlignment="Center"/>
+                <Button x:Name="LogoutButton" Content="Log Out" HorizontalAlignment="Right"
+                        Padding="8,2" Click="LogoutButton_Click"/>
+            </Grid>
+        </Border>
+
+        <TabControl Margin="12">
+            <TabItem Header="Catalogue Search">
+                <StackPanel Margin="12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="SearchBox" Padding="6" Grid.Column="0"/>
+                        <Button Content="Search" Padding="8,6" Margin="8,0,0,0"
+                                Grid.Column="1" Click="SearchButton_Click"/>
+                    </Grid>
+
+                    <ListView x:Name="CatalogueListView" Margin="0,12,0,0" Height="280">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Title" Width="250" DisplayMemberBinding="{Binding Title}"/>
+                                <GridViewColumn Header="Author" Width="150" DisplayMemberBinding="{Binding Author}"/>
+                                <GridViewColumn Header="Status" Width="100" DisplayMemberBinding="{Binding Status}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Borrow" Padding="8,4" Margin="0,0,8,0" Click="BorrowButton_Click"/>
+                        <Button Content="Reserve" Padding="8,4" Click="ReserveButton_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="My Loans">
+                <ListView x:Name="MyLoansListView" Margin="12">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Title" Width="220" DisplayMemberBinding="{Binding Title}"/>
+                            <GridViewColumn Header="Borrowed On" Width="120" DisplayMemberBinding="{Binding BorrowedOn}"/>
+                            <GridViewColumn Header="Due Date" Width="120" DisplayMemberBinding="{Binding DueDate}"/>
+                            <GridViewColumn Header="Status" Width="100" DisplayMemberBinding="{Binding Status}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+
+            <TabItem Header="My Reservations">
+                <ListView x:Name="MyReservationsListView" Margin="12">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Title" Width="250" DisplayMemberBinding="{Binding Title}"/>
+                            <GridViewColumn Header="Reserved On" Width="150" DisplayMemberBinding="{Binding ReservedOn}"/>
+                            <GridViewColumn Header="Position in Queue" Width="150" DisplayMemberBinding="{Binding QueuePosition}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>
