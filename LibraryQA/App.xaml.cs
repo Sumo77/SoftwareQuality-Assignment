@@ -7,21 +7,16 @@ using System.Security.Cryptography;
 
 namespace LibraryQA
 {
-    /// <summary>
     /// Interaction logic for App.xaml
-    /// </summary>
     public partial class App : Application
     {
-        /// <summary>
+        
         /// Full path to the SQLite database file, in the application's output folder.
-        /// </summary>
         public static string DatabasePath { get; } = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "library.db");
 
-        /// <summary>
         /// Connection string for the application database.
         /// Pass this to DatabaseHelper wherever data access is needed.
-        /// </summary>
         public static string ConnectionString => $"Data Source={DatabasePath}";
 
         protected override void OnStartup(StartupEventArgs e)

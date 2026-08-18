@@ -70,7 +70,7 @@ namespace LibraryQA.Views
 
         private void ShowError(string message) // Display error for user feedback
         {
-            ErrorText.Text = message;
+            ErrorText.Text = $"⚠ {message}";
             ErrorText.Visibility = Visibility.Visible;
         }
 

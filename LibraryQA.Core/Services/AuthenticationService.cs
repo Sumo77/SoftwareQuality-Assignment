@@ -41,12 +41,10 @@ namespace LibraryQA.Core.Services
 
         public static string HashPassword(string password) // Hash the password using SHA256 for secure comparison with stored hashes
         {
-            {
-                if (password == null) throw new ArgumentNullException(nameof(password));
+            if (password == null) throw new ArgumentNullException(nameof(password));
 
-                byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
-                return Convert.ToHexString(hash).ToLowerInvariant();
-            }
+            byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
+            return Convert.ToHexString(hash).ToLowerInvariant();
         }
     }
 }
