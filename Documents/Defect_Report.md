@@ -21,11 +21,11 @@ Defects found during development and testing.
 | | |
 |---|---|
 | **Title** | Documented and inputed password hashes do not match the actual password |
-| **Severity** | Critical |
+| **Severity** | High |
 | **Status** | Resolved |
 | **Found by** | Summer |
-| **Found in** | `QUICK_REFERENCE.md`, `SETUP_GUIDE.md`, `Database: Accounts Table` |
-| **Related** | REQ-5 + REQ-6 + REQ-7: Member + Staff + Login Views, REQ-10 + REQ-11: Usability + Security |
+| **Found in** | Original `README.md` + `Database: Accounts Table` |
+| **Related** | REQ-5 + REQ-6 + REQ-7: Member + Staff Views + Access Control, REQ-10 + REQ-11: Usability + Security |
 
 **Description:**
 

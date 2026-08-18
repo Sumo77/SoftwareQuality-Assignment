@@ -37,9 +37,6 @@ folders, which the app needs at runtime.
 dotnet run --project LibraryQA
 ```
 
-Or open `SoftwareQuality-Assignment1.slnx` in Visual Studio, set `LibraryQA` as
-the startup project, and press F5.
-
 On first launch the app creates `library.db` in its output folder and loads the
 sample data. Later launches reuse it.
 
