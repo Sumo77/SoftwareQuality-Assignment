@@ -26,22 +26,23 @@ complete.
 
 ## Matrix
 
-| Requirement | Description | Test cases | Covered |
-|---|---|---|---|
-| REQ-1 | Catalogue management | | |
-| REQ-2 | Borrow and return | | |
-| REQ-3 | Reservations | | |
-| REQ-4 | Overdue flagging | | |
-| REQ-5 | Member portal | TC-1 | Yes |
-| REQ-6 | Staff portal | TC-2 | Yes |
-| REQ-7 | Access control | TC-1, TC-2 | Yes |
-| REQ-8 | Loan limits | | |
-| REQ-9 | Input validation | | |
-| REQ-10 | Usability | | |
-| REQ-11 | Security | TC-2, TC-3 | Yes |
-| REQ-12 | Reliability | TC-3 | Yes |
-| REQ-13 | Maintainability | | |
-| REQ-14 | Data integrity | | |
+| Req ID | Requirement | Type | Test Case(s) | Covered |
+|--------|-------------|------|--------------|---------|
+| REQ-1 | Catalogue Management | Functional | | |
+| REQ-2 | Borrow and Return | Functional | | |
+| REQ-3 | Reservations | Functional | | |
+| REQ-4 | Overdue | Functional | | |
+| REQ-5 | Member Portal | Functional | TC-1 | Yes |
+| REQ-6 | Staff Portal | Functional | TC-2 | Yes |
+| REQ-7 | Access Control | Functional | TC-1, TC-2 | Yes |
+| REQ-8 | Loan Limits | Functional | | |
+| REQ-9 | Input Validation | Functional | | |
+| REQ-10 | Usability | Non-Functional | | |
+| REQ-11 | Security | Non-Functional | TC-2, TC-3 | Yes |
+| REQ-12 | Reliability | Non-Functional | TC-3 | Yes |
+| REQ-13 | Maintainability | Non-Functional | | |
+| REQ-14 | Integrity | Non-Functional | | |
+| REQ-15 | Performance | Non-Functional | | |
 
 ---
 
