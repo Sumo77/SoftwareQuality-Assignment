@@ -112,6 +112,24 @@ at query time rather than stored, so it is never stale.
 
 ---
 
+## Test data
+
+The database is seeded on first run from `SampleData.sql`. All accounts,
+loans and reservations are fabricated for demonstration and testing - they
+give each account a different starting state so the interfaces have something
+meaningful to display. For example, Alice has one active loan, Bob is at the
+two-item loan limit with one item overdue, and Carol has an active reservation.
+
+This data is currently fixed at initialisation and can only be changed by
+editing `SampleData.sql` and recreating the database. Adding or editing
+accounts through the application is planned for the next phase.
+
+Note that `App.xaml.cs` only initialises and seeds when no `library.db` exists.
+If the file is already present, an older seed is reused - delete it and rerun
+to pick up changes to `SampleData.sql`.
+
+---
+
 ## Documents
 
 - `Documents/SETUP_GUIDE.md` - setup and troubleshooting
