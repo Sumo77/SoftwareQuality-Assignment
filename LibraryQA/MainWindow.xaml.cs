@@ -9,36 +9,40 @@ namespace LibraryQA
         public MainWindow()
         {
             InitializeComponent();
-            ShowLogin();
+            //change later 
+            RootGrid.Children.Add(new MemberView(1));
         }
 
-        private void ShowLogin()
-        {
-            var loginView = new LoginView();
-            loginView.LoginSucceeded += LoginView_LoginSucceeded;
-
-            RootGrid.Children.Clear();
-            RootGrid.Children.Add(loginView);
-        }
-
-        private void LoginView_LoginSucceeded(object? sender, UserRole role)
-        {
-            if (role == UserRole.Staff)
-            {
-                var staffView = new StaffView();
-                staffView.LogoutRequested += (_, _) => ShowLogin();
-
-                RootGrid.Children.Clear();
-                RootGrid.Children.Add(staffView);
-            }
-            else
-            {
-                var memberView = new MemberView();
-                memberView.LogoutRequested += (_, _) => ShowLogin();
-
-                RootGrid.Children.Clear();
-                RootGrid.Children.Add(memberView);
-            }
-        }
+        // TODO: unused while testing MemberView with a hardcoded id above.
+        // Uncomment / fix once real login wiring (with a real memberId) is ready.
+        //
+        // private void ShowLogin()
+        // {
+        //     var loginView = new LoginView();
+        //     loginView.LoginSucceeded += LoginView_LoginSucceeded;
+        //
+        //     RootGrid.Children.Clear();
+        //     RootGrid.Children.Add(loginView);
+        // }
+        //
+        // private void LoginView_LoginSucceeded(object? sender, UserRole role)
+        // {
+        //     if (role == UserRole.Staff)
+        //     {
+        //         var staffView = new StaffView();
+        //         staffView.LogoutRequested += (_, _) => ShowLogin();
+        //
+        //         RootGrid.Children.Clear();
+        //         RootGrid.Children.Add(staffView);
+        //     }
+        //     else
+        //     {
+        //         var memberView = new MemberView(1 /* TODO: real memberId */);
+        //         memberView.LogoutRequested += (_, _) => ShowLogin(); 
+        //
+        //         RootGrid.Children.Clear();
+        //         RootGrid.Children.Add(memberView);
+        //     }
+        // }
     }
 }
