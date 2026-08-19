@@ -4,18 +4,15 @@ using System.IO;
 
 namespace LibraryQA.Core.Database
 {
-    /// <summary>
+    
     /// Populates an initialised database with the sample data set.
     /// DatabaseInitializer creates the schema; this class fills it.
-    /// </summary>
     public class DatabaseSeeder
     {
         private readonly string _connectionString;
 
-        /// <summary>
+        
         /// Initializes a new instance of DatabaseSeeder for the specified database file.
-        /// </summary>
-        /// <param name="databasePath">Full path to the SQLite database file (.db)</param>
         public DatabaseSeeder(string databasePath)
         {
             if (databasePath == null)
@@ -26,12 +23,10 @@ namespace LibraryQA.Core.Database
             _connectionString = $"Data Source={databasePath}";
         }
 
-        /// <summary>
+        
         /// Executes SampleData.sql against the database.
         /// Assumes the schema already exists and the tables are empty -
         /// running this twice will create duplicate rows.
-        /// </summary>
-        /// <returns>True if seeding succeeded, false otherwise</returns>
         public bool SeedSampleData()
         {
             try
