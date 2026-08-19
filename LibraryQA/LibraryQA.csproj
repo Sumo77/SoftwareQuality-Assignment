@@ -18,4 +18,10 @@
 	</Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="..\Database\DatabaseSchema.sql">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

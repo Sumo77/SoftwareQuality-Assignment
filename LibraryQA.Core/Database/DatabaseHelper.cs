@@ -5,28 +5,22 @@ using System.Data;
 
 namespace LibraryQA.Core.Database
 {
-    /// <summary>
     /// Provides data access methods for the Library Management System.
     /// Handles all database queries and commands with proper parameterization
     /// to prevent SQL injection and ensure data integrity.
-    /// </summary>
     public class DatabaseHelper : IDisposable
     {
         private readonly string _connectionString;
         private SqliteConnection? _connection;
 
-        /// <summary>
+        
         /// Initializes a new instance of DatabaseHelper with the specified connection string.
-        /// </summary>
-        /// <param name="connectionString">SQLite connection string</param>
         public DatabaseHelper(string connectionString)
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        /// <summary>
         /// Opens a connection to the database. Connection is reused for multiple operations.
-        /// </summary>
         private void OpenConnection()
         {
             if (_connection == null)
@@ -47,9 +41,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
         /// Closes the database connection if open.
-        /// </summary>
         public void CloseConnection()
         {
             if (_connection != null && _connection.State == ConnectionState.Open)
@@ -57,15 +49,32 @@ namespace LibraryQA.Core.Database
                 _connection.Close();
             }
         }
+        /// <summary>
+        /// Gets the AccountID for a given username, without requiring a password.
+        /// Used after a role has already been confirmed via Authenticate(), to
+        /// resolve which specific account just logged in.
+        /// </summary>
+        public int? GetAccountIdByUsername(string username)
+        {
+            OpenConnection();
 
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+            SELECT AccountID 
+            FROM Accounts 
+            WHERE Username = @username AND IsActive = 1";
+
+                command.Parameters.AddWithValue("@username", username);
+
+                var result = command.ExecuteScalar();
+                return result != null ? Convert.ToInt32(result) : null;
+            }
+        }
         #region Account Operations
 
-        /// <summary>
+
         /// Authenticates a user by username and password hash.
-        /// </summary>
-        /// <param name="username">Username (case-insensitive)</param>
-        /// <param name="passwordHash">Hashed password</param>
-        /// <returns>AccountID if valid credentials, null otherwise</returns>
         public int? ValidateLogin(string username, string passwordHash)
         {
             OpenConnection();
@@ -87,11 +96,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Gets the role (Member or Staff) for the specified account.
-        /// </summary>
-        /// <param name="accountId">Account ID</param>
-        /// <returns>Role string ('Member' or 'Staff'), or null if not found</returns>
         public string? GetAccountRole(int accountId)
         {
             OpenConnection();
@@ -106,11 +112,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Gets full account information for the specified account ID.
-        /// </summary>
-        /// <param name="accountId">Account ID</param>
-        /// <returns>Dictionary with account details, or null if not found</returns>
         public Dictionary<string, object>? GetAccountInfo(int accountId)
         {
             OpenConnection();
@@ -150,12 +153,9 @@ namespace LibraryQA.Core.Database
 
         #region Book/Catalogue Operations
 
-        /// <summary>
+        
         /// Searches the catalogue by title, author, or ISBN.
         /// Returns all matches as a list of book dictionaries.
-        /// </summary>
-        /// <param name="searchTerm">Search term (partial match supported)</param>
-        /// <returns>List of books matching the search criteria</returns>
         public List<Dictionary<string, object>> SearchCatalogue(string searchTerm)
         {
             OpenConnection();
@@ -196,11 +196,8 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        /// <summary>
+        
         /// Gets full details for a specific book by ID.
-        /// </summary>
-        /// <param name="bookId">Book ID</param>
-        /// <returns>Dictionary with book details, or null if not found</returns>
         public Dictionary<string, object>? GetBookById(int bookId)
         {
             OpenConnection();
@@ -237,12 +234,8 @@ namespace LibraryQA.Core.Database
             return null;
         }
 
-        /// <summary>
+        
         /// Updates the status of a book.
-        /// </summary>
-        /// <param name="bookId">Book ID</param>
-        /// <param name="newStatus">New status ('Available', 'On Loan', or 'Reserved')</param>
-        /// <returns>True if update succeeded, false otherwise</returns>
         public bool UpdateBookStatus(int bookId, string newStatus)
         {
             if (newStatus != "Available" && newStatus != "On Loan" && newStatus != "Reserved")
@@ -263,11 +256,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Gets all books with a specific status.
-        /// </summary>
-        /// <param name="status">Status to filter by ('Available', 'On Loan', 'Reserved')</param>
-        /// <returns>List of books with the specified status</returns>
         public List<Dictionary<string, object>> GetBooksByStatus(string status)
         {
             OpenConnection();
@@ -307,12 +297,9 @@ namespace LibraryQA.Core.Database
 
         #region Loan Operations
 
-        /// <summary>
+        
         /// Gets the count of active (unreturned) loans for a specific member.
         /// Used to enforce loan limits (REQ-8).
-        /// </summary>
-        /// <param name="memberId">Member account ID</param>
-        /// <returns>Number of active loans</returns>
         public int GetActiveLoanCount(int memberId)
         {
             OpenConnection();
@@ -331,11 +318,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Gets all active loans for a specific member.
-        /// </summary>
-        /// <param name="memberId">Member account ID</param>
-        /// <returns>List of active loan records with book details</returns>
         public List<Dictionary<string, object>> GetActiveLoans(int memberId)
         {
             OpenConnection();
@@ -376,11 +360,8 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        /// <summary>
+        
         /// Gets loan history (returned loans) for a specific member.
-        /// </summary>
-        /// <param name="memberId">Member account ID</param>
-        /// <returns>List of completed loan records</returns>
         public List<Dictionary<string, object>> GetLoanHistory(int memberId)
         {
             OpenConnection();
@@ -419,14 +400,8 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        /// <summary>
+        
         /// Creates a new loan record (staff action).
-        /// </summary>
-        /// <param name="bookId">Book ID to loan</param>
-        /// <param name="memberId">Member ID receiving the loan</param>
-        /// <param name="loanDate">Loan start date</param>
-        /// <param name="dueDate">Due date (typically loanDate + 14 days)</param>
-        /// <returns>New loan ID if successful, null otherwise</returns>
         public int? CreateLoan(int bookId, int memberId, DateTime loanDate, DateTime dueDate)
         {
             OpenConnection();
@@ -528,13 +503,8 @@ namespace LibraryQA.Core.Database
             return null;
         }
 
-        /// <summary>
+        
         /// Processes a return for an active loan (staff action).
-        /// </summary>
-        /// <param name="loanId">Loan ID to return</param>
-        /// <param name="returnDate">Date of return</param>
-        /// <param name="condition">Condition of returned item</param>
-        /// <returns>True if return processed successfully, false otherwise</returns>
         public bool ProcessReturn(int loanId, DateTime returnDate, string condition = "Good")
         {
             OpenConnection();
@@ -602,10 +572,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Gets all overdue loans (staff view).
-        /// </summary>
-        /// <returns>List of overdue loans with member and book details</returns>
         public List<Dictionary<string, object>> GetAllOverdueLoans()
         {
             OpenConnection();
@@ -654,11 +622,8 @@ namespace LibraryQA.Core.Database
 
         #region Reservation Operations
 
-        /// <summary>
+        
         /// Checks if a book already has an active reservation.
-        /// </summary>
-        /// <param name="bookId">Book ID to check</param>
-        /// <returns>True if an active reservation exists, false otherwise</returns>
         public bool HasActiveReservation(int bookId)
         {
             OpenConnection();
@@ -677,13 +642,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Creates a new reservation for a book (member action).
-        /// </summary>
-        /// <param name="bookId">Book ID to reserve</param>
-        /// <param name="memberId">Member ID placing the reservation</param>
-        /// <param name="reservationDate">Date of reservation</param>
-        /// <returns>New reservation ID if successful, null otherwise (e.g., duplicate reservation)</returns>
         public int? CreateReservation(int bookId, int memberId, DateTime reservationDate)
         {
             // Check if reservation already exists (extra safety beyond UNIQUE constraint)
@@ -717,11 +677,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Gets all active reservations for a specific member.
-        /// </summary>
-        /// <param name="memberId">Member account ID</param>
-        /// <returns>List of active reservation records with book details</returns>
         public List<Dictionary<string, object>> GetActiveReservations(int memberId)
         {
             OpenConnection();
@@ -798,10 +755,8 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        /// <summary>
+        
         /// Gets the count of all active reservations system-wide (staff reporting).
-        /// </summary>
-        /// <returns>Total number of active reservations</returns>
         public int GetTotalActiveReservationsCount()
         {
             OpenConnection();
@@ -819,10 +774,8 @@ namespace LibraryQA.Core.Database
 
         #region Staff Reporting Operations
 
-        /// <summary>
+        
         /// Gets statistics for staff dashboard/reporting.
-        /// </summary>
-        /// <returns>Dictionary containing key metrics</returns>
         public Dictionary<string, int> GetStaffStatistics()
         {
             OpenConnection();
@@ -858,11 +811,8 @@ namespace LibraryQA.Core.Database
             return stats;
         }
 
-        /// <summary>
+        
         /// Gets the most frequently borrowed books (staff reporting).
-        /// </summary>
-        /// <param name="topN">Number of top books to return</param>
-        /// <returns>List of books with borrow counts</returns>
         public List<Dictionary<string, object>> GetMostBorrowedBooks(int topN = 10)
         {
             OpenConnection();

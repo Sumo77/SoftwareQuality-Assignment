@@ -1,8 +1,9 @@
 <Solution>
-  <Folder Name="/Database Documents/">
-    <File Path="Database/QUICK_REFERENCE.md" />
-    <File Path="Database/README_Database.md" />
-    <File Path="Database/SETUP_GUIDE.md" />
+  <Folder Name="/Documents/">
+    <File Path="Documents/Defect_Report.md" />
+    <File Path="Documents/SETUP_GUIDE.md" />
+    <File Path="Documents/Traceability_Matrix.md" />
+    <File Path="README.md" />
   </Folder>
   <Project Path="LibraryQA.Core/LibraryQA.Core.csproj" Id="84823155-9f97-46be-b765-7354606c5cf1" />
   <Project Path="LibraryQA.Tests/LibraryQA.Tests.csproj" />
