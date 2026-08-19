@@ -178,7 +178,7 @@ namespace LibraryQA.Views
 
         private void ShowStatus(string message, bool isError)
         {
-            IssueReturnStatusText.Text = message;
+            IssueReturnStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
             IssueReturnStatusText.Foreground = isError
                 ? System.Windows.Media.Brushes.Red
                 : System.Windows.Media.Brushes.Green;

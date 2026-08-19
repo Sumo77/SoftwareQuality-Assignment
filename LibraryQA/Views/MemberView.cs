@@ -62,7 +62,7 @@ namespace LibraryQA.Views
                 "Borrowed", MessageBoxButton.OK, MessageBoxImage.Information);
 
             LoadMyLoans();
-            SearchButton_Click(sender, e); // refresh catalogue so status updates
+            LoadCatalogue(SearchBox.Text.Trim()); // refresh catalogue so status updates
         }
 
         private void ReserveButton_Click(object sender, RoutedEventArgs e)
@@ -87,7 +87,7 @@ namespace LibraryQA.Views
                 "Reserved", MessageBoxButton.OK, MessageBoxImage.Information);
 
             LoadMyReservations();
-            SearchButton_Click(sender, e);
+            LoadCatalogue(SearchBox.Text.Trim());
         }
 
         private void LoadMyLoans()

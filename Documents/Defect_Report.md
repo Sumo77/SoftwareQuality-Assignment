@@ -49,6 +49,37 @@ consolidated so there is one place to keep accurate rather than three.
 
 | | |
 |---|---|
+| **Title** | Book status not restored when a loan is returned |
+| **Severity** | High |
+| **Status** | Resolved |
+| **Found by** | Summer |
+| **Found in** | `StaffView.ReturnButton_Click` |
+| **Related** | REQ-2b (Return), REQ-14 (Integrity) |
+
+**Description:**
+
+Processing a return closed the loan record but left the book's status unchanged.
+An item returned to the library still showed as On Loan in the catalogue, so it
+could not be borrowed by anyone else. The return reported success and the
+application raised no error, so the fault was only visible by checking the
+catalogue against the loan record.
+
+**Root cause:**
+
+`ProcessReturn` updates the `Loans` table only. The corresponding status
+transition on `Books` was never called.
+
+**Fix:**
+
+After a successful return, the book status is set to Reserved if an active
+reservation exists, and Available otherwise.
+
+---
+
+## DEF-03
+
+| | |
+|---|---|
 | **Title** | Reservation is not marked fulfilled when the reserved item is returned |
 | **Severity** | Medium |
 | **Status** | Open — deferred to next phase |
@@ -81,7 +112,7 @@ itself is correct and tested; only reservation closure is outstanding.
 
 ---
 
-## DEF-03
+## DEF-04
 
 | | |
 |---|---|
@@ -119,5 +150,6 @@ document it, so the choice is deliberate rather than incidental.
 | ID | Title | Severity | Status |
 |---|---|---|---|
 | DEF-01 | Documented password hashes wrong | Critical | Fixed |
-| DEF-02 | Reservation not marked fulfilled when reserved item is returned | Medium | Open |
-| DEF-03 | Error presentation is inconsistent across the three interfaces | Low | Open |
+| DEF-02 | Book status not restored when a loan is returned | High | Resolved |
+| DEF-03 | Reservation not marked fulfilled when reserved item is returned | Medium | Open |
+| DEF-04 | Error presentation is inconsistent across the three interfaces | Low | Open |
