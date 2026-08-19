@@ -8,7 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace LibraryQA.Tests
 {
     [TestClass]
-    public class MemberActionsServiceTests
+    public class MemberViewTests
     {
         private string _dbPath = string.Empty;
         private string _connectionString = string.Empty;

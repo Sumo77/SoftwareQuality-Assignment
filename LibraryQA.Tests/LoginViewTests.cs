@@ -9,7 +9,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace LibraryQA.Tests
 {
     [TestClass]
-    public class AuthenticationServiceTests
+    public class LoginViewTests
     {
         private string _dbPath = string.Empty;
         private AuthenticationService _auth = null!;
