@@ -14,15 +14,9 @@
             <TextBox x:Name="UsernameBox" Margin="0,0,0,12" Padding="6"/>
 
             <TextBlock Text="Password" Margin="0,0,0,4"/>
-            <PasswordBox x:Name="PasswordBox" Margin="0,0,0,12" Padding="6"/>
+            <PasswordBox x:Name="PasswordBox" Margin="0,0,0,16" Padding="6"/>
 
-            <TextBlock Text="Log in as" Margin="0,0,0,4"/>
-            <ComboBox x:Name="RoleComboBox" Margin="0,0,0,16" SelectedIndex="0">
-                <ComboBoxItem Content="Member"/>
-                <ComboBoxItem Content="Staff"/>
-            </ComboBox>
-
-            <Button x:Name="LoginButton" Content="Log In" Padding="8" Click="LoginButton_Click"/>
+            <Button x:Name="LoginButton" Content="Log In" Padding="8" IsDefault="True" Click="LoginButton_Click"/>
 
             <TextBlock x:Name="ErrorText" Foreground="Red" TextWrapping="Wrap"
                        Margin="0,12,0,0" Visibility="Collapsed"/>

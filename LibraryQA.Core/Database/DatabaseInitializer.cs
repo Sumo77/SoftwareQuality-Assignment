@@ -4,31 +4,25 @@ using System.IO;
 
 namespace LibraryQA.Core.Database
 {
-    /// <summary>
     /// Handles database initialization and schema creation for the Library Management System.
     /// This class reads and executes the DatabaseSchema.sql script to create all tables,
     /// indexes, and constraints in the SQLite database.
-    /// </summary>
     public class DatabaseInitializer
     {
         private readonly string _connectionString;
         private readonly string _databasePath;
 
-        /// <summary>
+        
         /// Initializes a new instance of DatabaseInitializer with the specified database path.
-        /// </summary>
-        /// <param name="databasePath">Full path to the SQLite database file (.db)</param>
         public DatabaseInitializer(string databasePath)
         {
             _databasePath = databasePath ?? throw new ArgumentNullException(nameof(databasePath));
             _connectionString = $"Data Source={databasePath}";
         }
 
-        /// <summary>
+        
         /// Creates the database file and initializes the schema by executing DatabaseSchema.sql.
         /// If the database already exists, it will be dropped and recreated.
-        /// </summary>
-        /// <returns>True if initialization succeeded, false otherwise</returns>
         public bool InitializeDatabase()
         {
             try
@@ -81,10 +75,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Checks if the database file exists and contains the required tables.
-        /// </summary>
-        /// <returns>True if database exists with expected schema, false otherwise</returns>
         public bool DatabaseExists()
         {
             if (!File.Exists(_databasePath))
@@ -124,10 +116,9 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Drops and recreates the database with fresh schema.
         /// WARNING: This will delete all existing data.
-        /// </summary>
         public bool ResetDatabase()
         {
             try
@@ -149,14 +140,11 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
+        
         /// Gets the connection string for the configured database.
-        /// </summary>
         public string ConnectionString => _connectionString;
 
-        /// <summary>
         /// Gets the full path to the database file.
-        /// </summary>
         public string DatabasePath => _databasePath;
     }
 }

@@ -5,5 +5,6 @@
     <File Path="Database/SETUP_GUIDE.md" />
   </Folder>
   <Project Path="LibraryQA.Core/LibraryQA.Core.csproj" Id="84823155-9f97-46be-b765-7354606c5cf1" />
+  <Project Path="LibraryQA.Tests/LibraryQA.Tests.csproj" />
   <Project Path="LibraryQA/LibraryQA.csproj" Id="780fd604-3d10-402a-9a0e-a21719d31cd2" />
 </Solution>
