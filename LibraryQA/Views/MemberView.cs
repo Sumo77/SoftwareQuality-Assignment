@@ -23,6 +23,7 @@ namespace LibraryQA.Views
 
         private void MemberView_Loaded(object sender, RoutedEventArgs e)
         {
+            LoadCatalogue();
             LoadMyLoans();
             LoadMyReservations();
             LoadLoanHistory(); // REQ-5: members must be able to view their loan history
@@ -35,22 +36,7 @@ namespace LibraryQA.Views
 
         private void SearchButton_Click(object sender, RoutedEventArgs e)
         {
-            string query = SearchBox.Text.Trim();
-
-            using (var db = new DatabaseHelper(App.ConnectionString))
-            {
-                var rawResults = db.SearchCatalogue(query);
-
-                var results = rawResults.Select(r => new BookDisplayModel
-                {
-                    BookID = Convert.ToInt32(r["BookID"]),
-                    Title = r["Title"]?.ToString() ?? "",
-                    Author = r["Author"]?.ToString() ?? "",
-                    Status = r["Status"]?.ToString() ?? ""
-                }).ToList();
-
-                CatalogueListView.ItemsSource = results;
-            }
+            LoadCatalogue(SearchBox.Text.Trim());
         }
 
         private void BorrowButton_Click(object sender, RoutedEventArgs e)
@@ -160,6 +146,22 @@ namespace LibraryQA.Views
                 }).ToList();
 
                 LoanHistoryListView.ItemsSource = history;
+            }
+        }
+
+        private void LoadCatalogue(string query = "")
+        {
+            using (var db = new DatabaseHelper(App.ConnectionString))
+            {
+                var rawResults = db.SearchCatalogue(query);
+
+                CatalogueListView.ItemsSource = rawResults.Select(r => new BookDisplayModel
+                {
+                    BookID = Convert.ToInt32(r["BookID"]),
+                    Title = r["Title"]?.ToString() ?? "",
+                    Author = r["Author"]?.ToString() ?? "",
+                    Status = r["Status"]?.ToString() ?? ""
+                }).ToList();
             }
         }
     }

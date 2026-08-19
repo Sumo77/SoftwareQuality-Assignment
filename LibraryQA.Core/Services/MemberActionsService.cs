@@ -41,13 +41,13 @@ namespace LibraryQA.Core.Services
                 // REQ-14: status must reflect reality before we allow a state change.
                 if (book["Status"].ToString() != "Available")
                 {
-                    return new BorrowResult { Success = false, Message = "This item is not available to borrow." };
+                    return new BorrowResult { Success = false, Message = "This book is currently not available to borrow - It may be able to be reserved, otherwise please check back and try again at a later date." };
                 }
 
                 // REQ-8
                 if (db.GetActiveLoanCount(memberId) >= MaxActiveLoans)
                 {
-                    return new BorrowResult { Success = false, Message = "The limit has been reached." };
+                    return new BorrowResult { Success = false, Message = "The borrowing limit has been reached - Maximum " + MaxActiveLoans + " books can be borrowed at a time." };
                 }
 
                 DateTime loanDate = DateTime.Today;
@@ -57,12 +57,12 @@ namespace LibraryQA.Core.Services
 
                 if (loanId == null)
                 {
-                    return new BorrowResult { Success = false, Message = "Could not create the loan. Please try again." };
+                    return new BorrowResult { Success = false, Message = "Unable to complete the loan. Please try again." };
                 }
 
                 db.UpdateBookStatus(bookId, "On Loan");
 
-                return new BorrowResult { Success = true, Message = "Borrowed successfully.", DueDate = dueDate };
+                return new BorrowResult { Success = true, Message = "Borrowed " + book["Title"] + " successfully.", DueDate = dueDate };
             }
         }
 
@@ -86,14 +86,14 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult
                     {
                         Success = false,
-                        Message = "This item is currently available — borrow it directly instead of reserving it."
+                        Message = "This book is currently available! — You may borrow it directly instead of reserving it."
                     };
                 }
 
                 // REQ-3: reject if another member already holds the active reservation.
                 if (db.HasActiveReservation(bookId))
                 {
-                    return new ReserveResult { Success = false, Message = "This item is already reserved." };
+                    return new ReserveResult { Success = false, Message = "Apologies, this book is already reserved - Please check back and try again at a later date." };
                 }
 
                 int? reservationId = db.CreateReservation(bookId, memberId, DateTime.Today);
@@ -103,7 +103,7 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult
                     {
                         Success = false,
-                        Message = "Could not create the reservation. It may have just been reserved by someone else."
+                        Message = "Unable to reserve the book - It may have been reserved by someone else, so please check back and try again at a later date."
                     };
                 }
 

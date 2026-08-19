@@ -21,11 +21,13 @@
                 <StackPanel Margin="12">
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                         <TextBlock Text="Member ID" Width="150"/>
-                        <TextBlock Text="Book ID (issue) / Loan ID (return)" Width="150"/>
+                        <TextBlock Text="Book ID (Issue)" Width="150"/>
+                        <TextBlock Text="Loan ID (Return)" Width="150"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBox x:Name="MemberIdBox" Width="150" Padding="6" Margin="0,0,8,0"/>
-                        <TextBox x:Name="BookIdBox" Width="150" Padding="6" Margin="0,0,8,0"/>
+                        <TextBox x:Name="MemberIdBox" Width="150" Padding="6" Margin="0,0,0,4"/>
+                        <TextBox x:Name="BookIdBox" Width="150" Padding="6" Margin="0,0,0,4"/>
+                        <TextBox x:Name="LoanIdBox" Width="150" Padding="6" Margin="0,0,0,4"/>
                     </StackPanel>
                     <StackPanel Orientation="Horizontal">
                         <Button Content="Issue Loan" Padding="8,4" Margin="0,0,8,0" Click="IssueButton_Click"/>
@@ -65,7 +67,7 @@
                 </ListView>
             </TabItem>
 
-            <TabItem Header="Reporting">
+            <TabItem Header="Report Summary">
                 <StackPanel Margin="12">
                     <TextBlock Text="Summary Statistics" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
                     <TextBlock x:Name="TotalOnLoanText" Text="Items currently on loan: -"/>

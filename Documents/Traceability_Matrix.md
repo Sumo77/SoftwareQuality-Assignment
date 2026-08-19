@@ -37,11 +37,11 @@ complete.
 | REQ-7 | Access Control | Functional | TC-1, TC-2, TC-7 | Yes |
 | REQ-8 | Loan Limits | Functional | TC-10 | Yes |
 | REQ-9 | Input Validation | Functional | TC-5 | Yes |
-| REQ-10 | Usability | Non-Functional | Usability walkthrough | Informal |
+| REQ-10 | Usability | Non-Functional | Usability walkthrough | Informal Yes |
 | REQ-11 | Security | Non-Functional | TC-2, TC-3, TC-7 | Yes |
 | REQ-12 | Reliability | Non-Functional | TC-3, TC-5 | Yes |
-| REQ-13 | Maintainability | Non-Functional | Code review at merge | Informal |
+| REQ-13 | Maintainability | Non-Functional | Code review at merge | Informal Yes |
 | REQ-14 | Integrity | Non-Functional | TC-8, TC-9 | Yes |
-| REQ-15 | Performance | Non-Functional | TC-6 | Partial |
+| REQ-15 | Performance | Non-Functional | TC-6 | Yes |
 
 ---

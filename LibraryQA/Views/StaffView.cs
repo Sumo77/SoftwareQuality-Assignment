@@ -76,7 +76,7 @@ namespace LibraryQA.Views
         private void ReturnButton_Click(object sender, RoutedEventArgs e)
         {
             if (!int.TryParse(MemberIdBox.Text.Trim(), out int memberId) ||
-                !int.TryParse(BookIdBox.Text.Trim(), out int loanId))
+                !int.TryParse(LoanIdBox.Text.Trim(), out int loanId))
             {
                 ShowStatus("Please enter a valid numeric Member ID and Loan ID to process a return.", isError: true);
                 return;
@@ -109,6 +109,10 @@ namespace LibraryQA.Views
                 ShowStatus($"Loan #{loanId} could not be returned. It may already be returned or does not exist.", isError: true);
                 return;
             }
+
+            int bookId = Convert.ToInt32(loan["BookID"]);
+            string newStatus = db.HasActiveReservation(bookId) ? "Reserved" : "Available";
+            db.UpdateBookStatus(bookId, newStatus);
 
             ShowStatus($"Loan #{loanId} processed as returned.", isError: false);
             RefreshAllData();
