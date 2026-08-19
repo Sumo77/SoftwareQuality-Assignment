@@ -431,21 +431,101 @@ namespace LibraryQA.Core.Database
         {
             OpenConnection();
 
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                // Reject if the item is not currently available (already on loan or reserved elsewhere)
+                using (var checkCommand = _connection.CreateCommand())
+                {
+                    checkCommand.Transaction = transaction;
+                    checkCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
+                    checkCommand.Parameters.AddWithValue("@bookId", bookId);
+
+                    var status = checkCommand.ExecuteScalar()?.ToString();
+                    if (status != "Available")
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+                }
+
+                int? loanId;
+                using (var command = _connection.CreateCommand())
+                {
+                    command.Transaction = transaction;
+                    command.CommandText = @"
+                        INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate)
+                        VALUES (@bookId, @memberId, @loanDate, @dueDate);
+                        SELECT last_insert_rowid();";
+
+                    command.Parameters.AddWithValue("@bookId", bookId);
+                    command.Parameters.AddWithValue("@memberId", memberId);
+                    command.Parameters.AddWithValue("@loanDate", loanDate.ToString("yyyy-MM-dd"));
+                    command.Parameters.AddWithValue("@dueDate", dueDate.ToString("yyyy-MM-dd"));
+
+                    var result = command.ExecuteScalar();
+                    loanId = result != null ? Convert.ToInt32(result) : (int?)null;
+                }
+
+                if (loanId == null)
+                {
+                    transaction.Rollback();
+                    return null;
+                }
+
+                using (var updateCommand = _connection.CreateCommand())
+                {
+                    updateCommand.Transaction = transaction;
+                    updateCommand.CommandText = "UPDATE Books SET Status = 'On Loan' WHERE BookID = @bookId";
+                    updateCommand.Parameters.AddWithValue("@bookId", bookId);
+                    updateCommand.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+                return loanId;
+            }
+        }
+
+        /// <summary>
+        /// Gets details for a specific loan, including its associated book and member.
+        /// </summary>
+        /// <param name="loanId">Loan ID</param>
+        /// <returns>Dictionary with loan details, or null if not found</returns>
+        public Dictionary<string, object>? GetLoanById(int loanId)
+        {
+            OpenConnection();
+
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate)
-                    VALUES (@bookId, @memberId, @loanDate, @dueDate);
-                    SELECT last_insert_rowid();";
+                    SELECT L.LoanID, L.BookID, B.Title, L.MemberID, A.FirstName, A.LastName,
+                           L.LoanDate, L.DueDate, L.ReturnDate
+                    FROM Loans L
+                    JOIN Books B ON L.BookID = B.BookID
+                    JOIN Accounts A ON L.MemberID = A.AccountID
+                    WHERE L.LoanID = @loanId";
 
-                command.Parameters.AddWithValue("@bookId", bookId);
-                command.Parameters.AddWithValue("@memberId", memberId);
-                command.Parameters.AddWithValue("@loanDate", loanDate.ToString("yyyy-MM-dd"));
-                command.Parameters.AddWithValue("@dueDate", dueDate.ToString("yyyy-MM-dd"));
+                command.Parameters.AddWithValue("@loanId", loanId);
 
-                var result = command.ExecuteScalar();
-                return result != null ? Convert.ToInt32(result) : null;
+                using (var reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        return new Dictionary<string, object>
+                        {
+                            ["LoanID"] = reader["LoanID"],
+                            ["BookID"] = reader["BookID"],
+                            ["Title"] = reader["Title"],
+                            ["MemberID"] = reader["MemberID"],
+                            ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
+                            ["LoanDate"] = reader["LoanDate"],
+                            ["DueDate"] = reader["DueDate"],
+                            ["ReturnDate"] = reader["ReturnDate"] ?? DBNull.Value
+                        };
+                    }
+                }
             }
+
+            return null;
         }
 
         /// <summary>
@@ -459,19 +539,66 @@ namespace LibraryQA.Core.Database
         {
             OpenConnection();
 
-            using (var command = _connection!.CreateCommand())
+            using (var transaction = _connection!.BeginTransaction())
             {
-                command.CommandText = @"
-                    UPDATE Loans 
-                    SET ReturnDate = @returnDate, ReturnCondition = @condition
-                    WHERE LoanID = @loanId AND ReturnDate IS NULL";
+                int bookId;
+                using (var lookupCommand = _connection.CreateCommand())
+                {
+                    lookupCommand.Transaction = transaction;
+                    lookupCommand.CommandText = "SELECT BookID FROM Loans WHERE LoanID = @loanId AND ReturnDate IS NULL";
+                    lookupCommand.Parameters.AddWithValue("@loanId", loanId);
 
-                command.Parameters.AddWithValue("@loanId", loanId);
-                command.Parameters.AddWithValue("@returnDate", returnDate.ToString("yyyy-MM-dd"));
-                command.Parameters.AddWithValue("@condition", condition);
+                    var bookIdResult = lookupCommand.ExecuteScalar();
+                    if (bookIdResult == null)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
 
-                int rowsAffected = command.ExecuteNonQuery();
-                return rowsAffected > 0;
+                    bookId = Convert.ToInt32(bookIdResult);
+                }
+
+                using (var command = _connection.CreateCommand())
+                {
+                    command.Transaction = transaction;
+                    command.CommandText = @"
+                        UPDATE Loans 
+                        SET ReturnDate = @returnDate, ReturnCondition = @condition
+                        WHERE LoanID = @loanId AND ReturnDate IS NULL";
+
+                    command.Parameters.AddWithValue("@loanId", loanId);
+                    command.Parameters.AddWithValue("@returnDate", returnDate.ToString("yyyy-MM-dd"));
+                    command.Parameters.AddWithValue("@condition", condition);
+
+                    int rowsAffected = command.ExecuteNonQuery();
+                    if (rowsAffected == 0)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+
+                // Restore catalogue status: Reserved if a pending reservation exists for this book, otherwise Available
+                using (var reservationCheckCommand = _connection.CreateCommand())
+                {
+                    reservationCheckCommand.Transaction = transaction;
+                    reservationCheckCommand.CommandText = "SELECT COUNT(*) FROM Reservations WHERE BookID = @bookId AND FulfilledDate IS NULL";
+                    reservationCheckCommand.Parameters.AddWithValue("@bookId", bookId);
+
+                    bool hasReservation = Convert.ToInt32(reservationCheckCommand.ExecuteScalar()) > 0;
+
+                    using (var updateCommand = _connection.CreateCommand())
+                    {
+                        updateCommand.Transaction = transaction;
+                        updateCommand.CommandText = "UPDATE Books SET Status = @status WHERE BookID = @bookId";
+                        updateCommand.Parameters.AddWithValue("@status", hasReservation ? "Reserved" : "Available");
+                        updateCommand.Parameters.AddWithValue("@bookId", bookId);
+                        updateCommand.ExecuteNonQuery();
+                    }
+                }
+
+                transaction.Commit();
+                return true;
             }
         }
 
@@ -510,6 +637,7 @@ namespace LibraryQA.Core.Database
                             ["MemberID"] = reader["MemberID"],
                             ["FirstName"] = reader["FirstName"],
                             ["LastName"] = reader["LastName"],
+                            ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
                             ["Email"] = reader["Email"] ?? "",
                             ["LoanDate"] = reader["LoanDate"],
                             ["DueDate"] = reader["DueDate"],
@@ -620,6 +748,47 @@ namespace LibraryQA.Core.Database
                             ["BookID"] = reader["BookID"],
                             ["Title"] = reader["Title"],
                             ["Author"] = reader["Author"],
+                            ["ReservationDate"] = reader["ReservationDate"]
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Gets all active reservations system-wide, including the reserving member (staff view).
+        /// </summary>
+        /// <returns>List of active reservation records with book and member details</returns>
+        public List<Dictionary<string, object>> GetAllActiveReservations()
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT R.ReservationID, R.BookID, B.Title, B.Author,
+                           R.MemberID, A.FirstName, A.LastName, R.ReservationDate
+                    FROM Reservations R
+                    JOIN Books B ON R.BookID = B.BookID
+                    JOIN Accounts A ON R.MemberID = A.AccountID
+                    WHERE R.FulfilledDate IS NULL
+                    ORDER BY R.ReservationDate";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["ReservationID"] = reader["ReservationID"],
+                            ["BookID"] = reader["BookID"],
+                            ["Title"] = reader["Title"],
+                            ["Author"] = reader["Author"],
+                            ["MemberID"] = reader["MemberID"],
+                            ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
                             ["ReservationDate"] = reader["ReservationDate"]
                         });
                     }

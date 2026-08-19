@@ -4,7 +4,8 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="500" d:DesignWidth="700">
+             d:DesignHeight="500" d:DesignWidth="700"
+             Loaded="StaffView_Loaded">
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="#9F4E2E" Padding="12">
             <Grid>
@@ -18,7 +19,10 @@
         <TabControl Margin="12">
             <TabItem Header="Issue / Return">
                 <StackPanel Margin="12">
-                    <TextBlock Text="Member ID" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                        <TextBlock Text="Member ID" Width="150"/>
+                        <TextBlock Text="Book ID (issue) / Loan ID (return)" Width="150"/>
+                    </StackPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                         <TextBox x:Name="MemberIdBox" Width="150" Padding="6" Margin="0,0,8,0"/>
                         <TextBox x:Name="BookIdBox" Width="150" Padding="6" Margin="0,0,8,0"/>
@@ -27,6 +31,7 @@
                         <Button Content="Issue Loan" Padding="8,4" Margin="0,0,8,0" Click="IssueButton_Click"/>
                         <Button Content="Process Return" Padding="8,4" Click="ReturnButton_Click"/>
                     </StackPanel>
+                    <TextBlock x:Name="IssueReturnStatusText" Margin="0,12,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </TabItem>
 
@@ -35,7 +40,10 @@
                     <ListView.View>
                         <GridView>
                             <GridViewColumn Header="Title" Width="220" DisplayMemberBinding="{Binding Title}"/>
+                            <GridViewColumn Header="Book ID" Width="70" DisplayMemberBinding="{Binding BookId}"/>
+                            <GridViewColumn Header="Loan ID" Width="70" DisplayMemberBinding="{Binding LoanId}"/>
                             <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
+                            <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
                             <GridViewColumn Header="Due Date" Width="120" DisplayMemberBinding="{Binding DueDate}"/>
                             <GridViewColumn Header="Days Overdue" Width="120" DisplayMemberBinding="{Binding DaysOverdue}"/>
                         </GridView>
@@ -48,7 +56,9 @@
                     <ListView.View>
                         <GridView>
                             <GridViewColumn Header="Title" Width="220" DisplayMemberBinding="{Binding Title}"/>
+                            <GridViewColumn Header="Book ID" Width="70" DisplayMemberBinding="{Binding BookId}"/>
                             <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
+                            <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
                             <GridViewColumn Header="Reserved On" Width="150" DisplayMemberBinding="{Binding ReservedOn}"/>
                         </GridView>
                     </ListView.View>
