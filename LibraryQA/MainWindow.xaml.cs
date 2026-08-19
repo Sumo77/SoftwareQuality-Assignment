@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using LibraryQA.Core.Models;
+using LibraryQA.Core.Services;
 using LibraryQA.Views;
 
 namespace LibraryQA
@@ -23,6 +24,19 @@ namespace LibraryQA
 
         private void LoginView_LoginSucceeded(object? sender, UserRole role)
         {
+            var loginView = sender as LoginView;
+            string username = loginView?.UsernameBox.Text.Trim() ?? "";
+
+            var authService = new AuthenticationService(App.ConnectionString);
+            int? accountId = authService.GetAccountId(username);
+
+            if (accountId == null)
+            {
+                MessageBox.Show("Could not resolve the logged-in account. Please try again.",
+                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
             if (role == UserRole.Staff)
             {
                 var staffView = new StaffView();
@@ -33,7 +47,7 @@ namespace LibraryQA
             }
             else
             {
-                var memberView = new MemberView();
+                var memberView = new MemberView(accountId.Value);
                 memberView.LogoutRequested += (_, _) => ShowLogin();
 
                 RootGrid.Children.Clear();

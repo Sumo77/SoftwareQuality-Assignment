@@ -46,5 +46,16 @@ namespace LibraryQA.Core.Services
             byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
             return Convert.ToHexString(hash).ToLowerInvariant();
         }
+        //matching method 
+        public int? GetAccountId(string username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return null;
+
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                return db.GetAccountIdByUsername(username.Trim());
+            }
+        }
     }
 }

@@ -49,10 +49,31 @@ namespace LibraryQA.Core.Database
                 _connection.Close();
             }
         }
+        /// <summary>
+        /// Gets the AccountID for a given username, without requiring a password.
+        /// Used after a role has already been confirmed via Authenticate(), to
+        /// resolve which specific account just logged in.
+        /// </summary>
+        public int? GetAccountIdByUsername(string username)
+        {
+            OpenConnection();
 
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+            SELECT AccountID 
+            FROM Accounts 
+            WHERE Username = @username AND IsActive = 1";
+
+                command.Parameters.AddWithValue("@username", username);
+
+                var result = command.ExecuteScalar();
+                return result != null ? Convert.ToInt32(result) : null;
+            }
+        }
         #region Account Operations
 
-        
+
         /// Authenticates a user by username and password hash.
         public int? ValidateLogin(string username, string passwordHash)
         {
