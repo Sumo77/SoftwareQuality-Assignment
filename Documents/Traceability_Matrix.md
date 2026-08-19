@@ -13,14 +13,14 @@ complete.
 | TC-1 | Valid member credentials return the Member role | Unit | Summer | Pass |
 | TC-2 | Valid staff credentials return the Staff role | Unit | Summer | Pass |
 | TC-3 | Correct username with wrong password is rejected | Unit | Summer | Pass |
-| TC-4 | Staff view shows the correct active reservation count | | John | |
-| TC-5 | Issue loan with an invalid book ID shows a warning | | John | |
-| TC-6 | Return button closes the loan and updates status | | John | |
-| TC-7 | Member account is denied access to staff features | | John | |
-| TC-8 | _[test]_ | | Daria | |
-| TC-9 | _[test]_ | | Daria | |
-| TC-10 | _[test]_ | | Daria | |
-| TC-11 | _[test]_ | | Daria | |
+| TC-4 | Staff view shows the correct active reservation count | Unit | John | |
+| TC-5 | Issue loan with an invalid book ID shows a warning | Unit | John | |
+| TC-6 | Return button closes the loan and updates status | Integration | John | |
+| TC-7 | Member account is denied access to staff features | Unit | John | |
+| TC-8 | Borrowing an available book sets a 14-day due date and status "On Loan" | Integration | Daria | |
+| TC-9 | Reserving an already-reserved book is rejected | Unit | Daria | |
+| TC-10 | Member at the 2-loan limit is prevented from borrowing a 3rd | Unit | Daria | |
+| TC-11 | A member sees only their own active loans | Unit | Daria | |
 
 ---
 
@@ -28,24 +28,20 @@ complete.
 
 | Req ID | Requirement | Type | Test Case(s) | Covered |
 |--------|-------------|------|--------------|---------|
-| REQ-1 | Catalogue Management | Functional | | |
-| REQ-2 | Borrow and Return | Functional | | |
-| REQ-3 | Reservations | Functional | | |
-| REQ-4 | Overdue | Functional | | |
-| REQ-5 | Member Portal | Functional | TC-1 | Yes |
-| REQ-6 | Staff Portal | Functional | TC-2 | Yes |
-| REQ-7 | Access Control | Functional | TC-1, TC-2 | Yes |
-| REQ-8 | Loan Limits | Functional | | |
-| REQ-9 | Input Validation | Functional | | |
-| REQ-10 | Usability | Non-Functional | | |
-| REQ-11 | Security | Non-Functional | TC-2, TC-3 | Yes |
-| REQ-12 | Reliability | Non-Functional | TC-3 | Yes |
-| REQ-13 | Maintainability | Non-Functional | | |
-| REQ-14 | Integrity | Non-Functional | | |
-| REQ-15 | Performance | Non-Functional | | |
-
----
-
-## Notes
+| REQ-1 | Catalogue Management | Functional | | No |
+| REQ-2 | Borrow and Return | Functional | TC-6, TC-8 | Yes |
+| REQ-3 | Reservations | Functional | TC-4, TC-9 | Yes |
+| REQ-4 | Overdue | Functional | | No |
+| REQ-5 | Member Portal | Functional | TC-1, TC-11 | Yes |
+| REQ-6 | Staff Portal | Functional | TC-2, TC-4 | Yes |
+| REQ-7 | Access Control | Functional | TC-1, TC-2, TC-7 | Yes |
+| REQ-8 | Loan Limits | Functional | TC-10 | Yes |
+| REQ-9 | Input Validation | Functional | TC-5 | Yes |
+| REQ-10 | Usability | Non-Functional | Usability walkthrough | Informal |
+| REQ-11 | Security | Non-Functional | TC-2, TC-3, TC-7 | Yes |
+| REQ-12 | Reliability | Non-Functional | TC-3, TC-5 | Yes |
+| REQ-13 | Maintainability | Non-Functional | Code review at merge | Informal |
+| REQ-14 | Integrity | Non-Functional | TC-8, TC-9 | Yes |
+| REQ-15 | Performance | Non-Functional | TC-6 | Partial |
 
 ---
