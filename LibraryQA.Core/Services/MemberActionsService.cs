@@ -3,49 +3,37 @@ using LibraryQA.Core.Database;
 
 namespace LibraryQA.Core.Services
 {
-    /// <summary>
-    /// Encapsulates the member-facing borrowing and reservation business rules
-    /// (REQ-2a, REQ-3, REQ-8, REQ-14) in one place, independent of the WPF UI,
-    /// so they can be unit tested directly (REQ-13).
-    /// </summary>
+    // Member Actions Service handles borrowing and reserving book functions for members
     public class MemberActionsService
     {
         private readonly string _connectionString;
 
-        // REQ-8: loan limit enforced in the application layer.
         private const int MaxActiveLoans = 2;
 
-        // REQ-2a: standard loan period.
         private const int LoanPeriodDays = 14;
 
-        public MemberActionsService(string connectionString)
+        public MemberActionsService(string connectionString) // Initialise Database Access Connection
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        /// <summary>
-        /// Attempts to borrow a book for a member, per REQ-2a (loan/due date, status change)
-        /// and REQ-8 (loan limit).
-        /// </summary>
-        public BorrowResult BorrowBook(int bookId, int memberId)
+        public BorrowResult BorrowBook(int bookId, int memberId) // Book borrowing process for members, performs checks then performs loan
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
                 var book = db.GetBookById(bookId);
 
-                if (book == null)
+                if (book == null) // Check if book exists
                 {
                     return new BorrowResult { Success = false, Message = "Book not found." };
                 }
 
-                // REQ-14: status must reflect reality before we allow a state change.
-                if (book["Status"].ToString() != "Available")
+                if (book["Status"].ToString() != "Available") // Checks if book is avliable to borrow
                 {
                     return new BorrowResult { Success = false, Message = "This book is currently not available to borrow - It may be able to be reserved, otherwise please check back and try again at a later date." };
                 }
 
-                // REQ-8
-                if (db.GetActiveLoanCount(memberId) >= MaxActiveLoans)
+                if (db.GetActiveLoanCount(memberId) >= MaxActiveLoans) // Checks if member has reached borrowing limit
                 {
                     return new BorrowResult { Success = false, Message = "The borrowing limit has been reached - Maximum " + MaxActiveLoans + " books can be borrowed at a time." };
                 }
@@ -53,35 +41,31 @@ namespace LibraryQA.Core.Services
                 DateTime loanDate = DateTime.Today;
                 DateTime dueDate = loanDate.AddDays(LoanPeriodDays);
 
-                int? loanId = db.CreateLoan(bookId, memberId, loanDate, dueDate);
+                int? loanId = db.CreateLoan(bookId, memberId, loanDate, dueDate); // Create book loan
 
-                if (loanId == null)
+                if (loanId == null) // Check book loan was successful
                 {
                     return new BorrowResult { Success = false, Message = "Unable to complete the loan. Please try again." };
                 }
 
-                db.UpdateBookStatus(bookId, "On Loan");
+                db.UpdateBookStatus(bookId, "On Loan"); // Update book status to properly reflect new status, return result
 
                 return new BorrowResult { Success = true, Message = "Borrowed " + book["Title"] + " successfully.", DueDate = dueDate };
             }
         }
 
-        /// <summary>
-        /// Attempts to reserve a book that is currently on loan, per REQ-3
-        /// (single active reservation per item) and REQ-14 (status integrity).
-        /// </summary>
-        public ReserveResult ReserveBook(int bookId, int memberId)
+        public ReserveResult ReserveBook(int bookId, int memberId) // Book reserving process for members, performs checks then performs reservation
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
                 var book = db.GetBookById(bookId);
 
-                if (book == null)
+                if (book == null) // Check if book exists
                 {
                     return new ReserveResult { Success = false, Message = "Book not found." };
                 }
 
-                if (book["Status"].ToString() == "Available")
+                if (book["Status"].ToString() == "Available") // Check if book is available, as a reservation is then not needed
                 {
                     return new ReserveResult
                     {
@@ -90,15 +74,14 @@ namespace LibraryQA.Core.Services
                     };
                 }
 
-                // REQ-3: reject if another member already holds the active reservation.
-                if (db.HasActiveReservation(bookId))
+                if (db.HasActiveReservation(bookId)) // Check if book is already reserved, as then unable to reserve
                 {
                     return new ReserveResult { Success = false, Message = "Apologies, this book is already reserved - Please check back and try again at a later date." };
                 }
 
-                int? reservationId = db.CreateReservation(bookId, memberId, DateTime.Today);
+                int? reservationId = db.CreateReservation(bookId, memberId, DateTime.Today); // Create reservation
 
-                if (reservationId == null)
+                if (reservationId == null) // Check if reservation was successful
                 {
                     return new ReserveResult
                     {
@@ -107,7 +90,7 @@ namespace LibraryQA.Core.Services
                     };
                 }
 
-                db.UpdateBookStatus(bookId, "Reserved");
+                db.UpdateBookStatus(bookId, "Reserved"); // Update book status to properly reflect new status, return result
 
                 return new ReserveResult { Success = true, Message = "Reserved successfully." };
             }

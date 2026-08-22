@@ -8,6 +8,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace LibraryQA.Tests
 {
     [TestClass]
+    // Member Interface/View Tests
     public class MemberViewTests
     {
         private string _dbPath = string.Empty;
@@ -15,8 +16,9 @@ namespace LibraryQA.Tests
         private MemberActionsService _service = null!;
 
         [TestInitialize]
-        public void Setup()
+        public void Setup() // Setup the tests
         {
+            // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"membertest_{Guid.NewGuid()}.db");
             new DatabaseInitializer(_dbPath).InitializeDatabase();
             new DatabaseSeeder(_dbPath).SeedSampleData();
@@ -26,13 +28,13 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup()
+        public void Cleanup() // Cleans/Deletes the tests
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
         }
 
-        // TC-8: REQ-2a (Borrow), REQ-14 (Integrity)
+        // TC-8: Borrowing an "available" book sets a due date to 14 days from current date and changes status to "on loan" (REQ-2a, REQ-14)
         [TestMethod]
         public void BorrowBook_AvailableBook_SetsDueDateAndUpdatesStatus()
         {
@@ -48,7 +50,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-9: REQ-3 (Reservations), REQ-14 (Integrity)
+        // TC-9: Reserving a book that already has an active reservation is rejected and leaves its status unchanged (REQ-3, REQ-14)
         [TestMethod]
         public void ReserveBook_AlreadyReserved_RejectsAndKeepsStatusUnchanged()
         {
@@ -64,7 +66,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-10: REQ-8 (Loan Limits)
+        // TC-10: A member already holding two active loans cannot borrow a third (REQ-8)
         [TestMethod]
         public void BorrowBook_MemberAtLoanLimit_RejectsWithLimitMessage()
         {
@@ -74,7 +76,7 @@ namespace LibraryQA.Tests
             StringAssert.Contains(result.Message, "limit has been reached");
         }
 
-        // TC-11: REQ-5 (Member Portal - data isolation)
+        // TC-11: Each member's active loan list contains only their own records and never another members (REQ-5)
         [TestMethod]
         public void GetActiveLoans_ReturnsOnlyTheRequestedMembersLoans()
         {

@@ -1,5 +1,6 @@
 ﻿namespace LibraryQA.Models
 {
+    // Stores the loan history information for display purposes
     public class LoanHistoryDisplayModel
     {
         public int LoanID { get; set; }

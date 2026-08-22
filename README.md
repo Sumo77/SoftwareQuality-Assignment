@@ -92,9 +92,9 @@ Four Tables: `Accounts`, `Books`, `Loans`, `Reservations`
 Two design decisions worth noting:
 
 **`Books.Status` is the single source of truth for availability** - one of
-`Available`, `On Loan` or `Reserved`, enforced by a CHECK constraint. Every
+`Available`, `On Loan` or `Reserved`, enforced by a check constraint. Every
 borrow, return and reservation must keep this in step with the underlying
-records (REQ-14).
+records.
 
 **One active reservation per book** is enforced by the database, not by code:
 
@@ -104,8 +104,8 @@ CREATE UNIQUE INDEX idx_reservations_active_book
     WHERE FulfilledDate IS NULL;
 ```
 
-A second reservation attempt fails with a UNIQUE constraint violation rather
-than relying on the application remembering to check (REQ-3).
+A second reservation attempt fails with a constraint violation rather
+than relying on system/application checks.
 
 Active loans are rows where `ReturnDate IS NULL`. Overdue status is calculated
 at query time rather than stored, so it is never stale.
@@ -114,7 +114,7 @@ at query time rather than stored, so it is never stale.
 
 ## Test data
 
-The database is seeded on first run from `SampleData.sql`. All accounts,
+The database is populated on first run from `SampleData.sql`. All accounts,
 loans and reservations are fabricated for demonstration and testing - they
 give each account a different starting state so the interfaces have something
 meaningful to display. For example, Alice has one active loan, Bob is at the
@@ -124,7 +124,7 @@ This data is currently fixed at initialisation and can only be changed by
 editing `SampleData.sql` and recreating the database. Adding or editing
 accounts through the application is planned for the next phase.
 
-Note that `App.xaml.cs` only initialises and seeds when no `library.db` exists.
+Note that `App.xaml.cs` only initialises and populates when no `library.db` exists.
 If the file is already present, an older seed is reused - delete it and rerun
 to pick up changes to `SampleData.sql`.
 
@@ -134,4 +134,4 @@ to pick up changes to `SampleData.sql`.
 
 - `Documents/SETUP_GUIDE.md` - setup and troubleshooting
 - `Documents/Traceability_Matrix.md` - requirements mapped to test cases
-- `Documents/Defect_Report.md` - defects found and their status
+- `Documents/Defect_Report.md` - defects found, status and severity from testing

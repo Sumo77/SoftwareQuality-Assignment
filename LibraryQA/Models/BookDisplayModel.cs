@@ -1,7 +1,6 @@
 ﻿namespace LibraryQA.Models
 {
-    // Lightweight DTO used only for binding search results to CatalogueListView.
-    // Keeps the WPF view decoupled from DatabaseHelper's raw Dictionary results.
+    // Stores the book details for display purposes (i.e search results)
     public class BookDisplayModel
     {
         public int BookID { get; set; }

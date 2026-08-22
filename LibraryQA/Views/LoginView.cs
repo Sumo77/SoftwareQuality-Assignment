@@ -10,6 +10,7 @@ using System.Windows.Controls;
 
 namespace LibraryQA.Views
 {
+    // Login Interface, directing users to either the Member or Staff view based on their sign-in role
     public partial class LoginView : UserControl
     {
         // MainWindow connects to this to know when to swap to Member/Staff view
@@ -49,7 +50,7 @@ namespace LibraryQA.Views
 
             try
             {
-                role = _authService.Authenticate(username, password);
+                role = _authService.Authenticate(username, password); // Authenticate user credentials against the database and retrieve their role
             }
             catch (SqliteException ex)
             {

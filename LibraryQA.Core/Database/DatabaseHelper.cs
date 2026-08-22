@@ -5,23 +5,19 @@ using System.Data;
 
 namespace LibraryQA.Core.Database
 {
-    /// Provides data access methods for the Library Management System.
-    /// Handles all database queries and commands with proper parameterization
-    /// to prevent SQL injection and ensure data integrity.
+    // Database Helper, provides data access methods for the Library Management System
+    // Handles all database queries and commands securely
     public class DatabaseHelper : IDisposable
     {
         private readonly string _connectionString;
         private SqliteConnection? _connection;
 
-        
-        /// Initializes a new instance of DatabaseHelper with the specified connection string.
-        public DatabaseHelper(string connectionString)
+        public DatabaseHelper(string connectionString) // Initializes a new instance of DatabaseHelper with the specified connection string.
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        /// Opens a connection to the database. Connection is reused for multiple operations.
-        private void OpenConnection()
+        private void OpenConnection() // Opens the database connection if not already open, and enables foreign keys
         {
             if (_connection == null)
             {
@@ -41,20 +37,15 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// Closes the database connection if open.
-        public void CloseConnection()
+        public void CloseConnection() // Closes the database connection if it is open
         {
             if (_connection != null && _connection.State == ConnectionState.Open)
             {
                 _connection.Close();
             }
         }
-        /// <summary>
-        /// Gets the AccountID for a given username, without requiring a password.
-        /// Used after a role has already been confirmed via Authenticate(), to
-        /// resolve which specific account just logged in.
-        /// </summary>
-        public int? GetAccountIdByUsername(string username)
+
+        public int? GetAccountIdByUsername(string username) // Retrieves the account ID for a given username, returning null if not found or inactive
         {
             OpenConnection();
 
@@ -73,9 +64,7 @@ namespace LibraryQA.Core.Database
         }
         #region Account Operations
 
-
-        /// Authenticates a user by username and password hash.
-        public int? ValidateLogin(string username, string passwordHash)
+        public int? ValidateLogin(string username, string passwordHash) // Validates login credentials and returns the account ID if valid
         {
             OpenConnection();
 
@@ -96,9 +85,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        
-        /// Gets the role (Member or Staff) for the specified account.
-        public string? GetAccountRole(int accountId)
+        public string? GetAccountRole(int accountId) // Retrieves the role of an account by its ID
         {
             OpenConnection();
 
@@ -111,10 +98,8 @@ namespace LibraryQA.Core.Database
                 return result?.ToString();
             }
         }
-
         
-        /// Gets full account information for the specified account ID.
-        public Dictionary<string, object>? GetAccountInfo(int accountId)
+        public Dictionary<string, object>? GetAccountInfo(int accountId) // Retrieves full account information for a given account ID
         {
             OpenConnection();
 
@@ -153,10 +138,7 @@ namespace LibraryQA.Core.Database
 
         #region Book/Catalogue Operations
 
-        
-        /// Searches the catalogue by title, author, or ISBN.
-        /// Returns all matches as a list of book dictionaries.
-        public List<Dictionary<string, object>> SearchCatalogue(string searchTerm)
+        public List<Dictionary<string, object>> SearchCatalogue(string searchTerm) // Searches the catalogue for books matching the search term in title, author, or ISBN, returning a list of matching books
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -196,9 +178,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        
-        /// Gets full details for a specific book by ID.
-        public Dictionary<string, object>? GetBookById(int bookId)
+        public Dictionary<string, object>? GetBookById(int bookId) // Retrieves detailed information for a specific book by its ID
         {
             OpenConnection();
 
@@ -234,9 +214,7 @@ namespace LibraryQA.Core.Database
             return null;
         }
 
-        
-        /// Updates the status of a book.
-        public bool UpdateBookStatus(int bookId, string newStatus)
+        public bool UpdateBookStatus(int bookId, string newStatus) // Updates the validated status of a book in the catalogue
         {
             if (newStatus != "Available" && newStatus != "On Loan" && newStatus != "Reserved")
             {
@@ -256,9 +234,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        
-        /// Gets all books with a specific status.
-        public List<Dictionary<string, object>> GetBooksByStatus(string status)
+        public List<Dictionary<string, object>> GetBooksByStatus(string status) // Gets all books with a specific status
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -297,10 +273,7 @@ namespace LibraryQA.Core.Database
 
         #region Loan Operations
 
-        
-        /// Gets the count of active (unreturned) loans for a specific member.
-        /// Used to enforce loan limits (REQ-8).
-        public int GetActiveLoanCount(int memberId)
+        public int GetActiveLoanCount(int memberId) // Gets the count of active loans for a specific member
         {
             OpenConnection();
 
@@ -318,9 +291,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        
-        /// Gets all active loans for a specific member.
-        public List<Dictionary<string, object>> GetActiveLoans(int memberId)
+        public List<Dictionary<string, object>> GetActiveLoans(int memberId) // Gets all active loans for a specific member, including overdue status and days overdue
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -360,9 +331,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        
-        /// Gets loan history (returned loans) for a specific member.
-        public List<Dictionary<string, object>> GetLoanHistory(int memberId)
+        public List<Dictionary<string, object>> GetLoanHistory(int memberId) // Gets loan history (returned loans) for a specific member
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -400,15 +369,13 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        
-        /// Creates a new loan record (staff action).
-        public int? CreateLoan(int bookId, int memberId, DateTime loanDate, DateTime dueDate)
+        public int? CreateLoan(int bookId, int memberId, DateTime loanDate, DateTime dueDate) // Creates a new loan for a book, ensuring the book is available and updating its status to "On Loan"
         {
             OpenConnection();
 
             using (var transaction = _connection!.BeginTransaction())
             {
-                // Reject if the item is not currently available (already on loan or reserved elsewhere)
+                // Reject if the item is not currently available (for example already on loan or reserved elsewhere)
                 using (var checkCommand = _connection.CreateCommand())
                 {
                     checkCommand.Transaction = transaction;
@@ -460,12 +427,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        /// <summary>
-        /// Gets details for a specific loan, including its associated book and member.
-        /// </summary>
-        /// <param name="loanId">Loan ID</param>
-        /// <returns>Dictionary with loan details, or null if not found</returns>
-        public Dictionary<string, object>? GetLoanById(int loanId)
+        public Dictionary<string, object>? GetLoanById(int loanId) // Retrieves detailed information for a specific loan by its ID, including book and member details
         {
             OpenConnection();
 
@@ -503,9 +465,7 @@ namespace LibraryQA.Core.Database
             return null;
         }
 
-        
-        /// Processes a return for an active loan (staff action).
-        public bool ProcessReturn(int loanId, DateTime returnDate, string condition = "Good")
+        public bool ProcessReturn(int loanId, DateTime returnDate, string condition = "Good") // Processes the return of a loaned book, updating the loan record and restoring the book's status based on pending reservations
         {
             OpenConnection();
 
@@ -548,7 +508,7 @@ namespace LibraryQA.Core.Database
                     }
                 }
 
-                // Restore catalogue status: Reserved if a pending reservation exists for this book, otherwise Available
+                // Restore catalogue status: "reserved" if a pending reservation exists, otherwise "available"
                 using (var reservationCheckCommand = _connection.CreateCommand())
                 {
                     reservationCheckCommand.Transaction = transaction;
@@ -572,9 +532,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        
-        /// Gets all overdue loans (staff view).
-        public List<Dictionary<string, object>> GetAllOverdueLoans()
+        public List<Dictionary<string, object>> GetAllOverdueLoans() // Retrieves all overdue loans, including member and book details, for staff reporting
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -622,9 +580,7 @@ namespace LibraryQA.Core.Database
 
         #region Reservation Operations
 
-        
-        /// Checks if a book already has an active reservation.
-        public bool HasActiveReservation(int bookId)
+        public bool HasActiveReservation(int bookId) // Checks if a book already has an active reservation
         {
             OpenConnection();
 
@@ -642,12 +598,10 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        
-        /// Creates a new reservation for a book (member action).
-        public int? CreateReservation(int bookId, int memberId, DateTime reservationDate)
+        public int? CreateReservation(int bookId, int memberId, DateTime reservationDate) // Creates a new reservation for a book, ensuring no active reservation exists for the same book
         {
-            // Check if reservation already exists (extra safety beyond UNIQUE constraint)
-            if (HasActiveReservation(bookId))
+
+            if (HasActiveReservation(bookId)) // Check if reservation already exists
             {
                 return null;
             }
@@ -671,15 +625,13 @@ namespace LibraryQA.Core.Database
                     return result != null ? Convert.ToInt32(result) : null;
                 }
             }
-            catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // UNIQUE constraint violation
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
             {
                 return null;
             }
         }
 
-        
-        /// Gets all active reservations for a specific member.
-        public List<Dictionary<string, object>> GetActiveReservations(int memberId)
+        public List<Dictionary<string, object>> GetActiveReservations(int memberId) // Gets all active reservations for a specific member, including book details and reservation date
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -714,11 +666,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        /// <summary>
-        /// Gets all active reservations system-wide, including the reserving member (staff view).
-        /// </summary>
-        /// <returns>List of active reservation records with book and member details</returns>
-        public List<Dictionary<string, object>> GetAllActiveReservations()
+        public List<Dictionary<string, object>> GetAllActiveReservations() // Gets all active reservations system-wide, including book and member details, for staff reporting
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -755,9 +703,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        
-        /// Gets the count of all active reservations system-wide (staff reporting).
-        public int GetTotalActiveReservationsCount()
+        public int GetTotalActiveReservationsCount() // Gets the total count of active reservations system-wide, for staff reporting
         {
             OpenConnection();
 
@@ -853,7 +799,7 @@ namespace LibraryQA.Core.Database
 
         #region IDisposable Implementation
 
-        public void Dispose()
+        public void Dispose() // Ensure the database connection is properly closed and disposed of
         {
             CloseConnection();
             _connection?.Dispose();

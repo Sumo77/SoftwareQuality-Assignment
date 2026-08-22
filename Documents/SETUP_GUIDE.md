@@ -6,7 +6,7 @@ How to setup the application for use, run tests, and inspect the database.
 
 ## Prerequisites
 
-- **.NET 8 SDK** - `dotnet --version` should report 8.x or higher
+- **.NET 8 SDK** - using the cmd `dotnet --version` should return 8.x or higher.
 - **Windows** - the app uses Windows Presentation Foundation (WPF) and will not run on macOS or Linux
 - **Visual Studio 2022** (or any other compatible IDE)
 
@@ -29,7 +29,7 @@ dotnet build
 ```
 
 This also copies `DatabaseSchema.sql` and `SampleData.sql` into the output
-folders, which the app needs at runtime.
+folders, which the app needs to run.
 
 **3. Run**
 
@@ -38,28 +38,29 @@ dotnet run --project LibraryQA
 ```
 
 On first launch the app creates `library.db` in its output folder and loads the
-sample data. Later launches reuse it.
+sample data. Later launches reuse it to carry across any local changes made in the app.
 
 **4. Log in**
 
 Sign in as a member account for the member view (i.e `alice.member` / `member123`), 
 or staff account for the staff view (i.e `jane.staff` / `staff456`).
-Full list in the root README.
+
+Full list for sign-in information is located in the root README.
 
 ---
 
 ## Setup (Visual Studio 2022)
 
 Requires Visual Studio 2022 version 17.8 or later, with the **.NET desktop
-development** workload installed.
+development** installed.
 
 **1. Clone the repository**
 
-In Visual Studio: **Git → Clone Repository**, paste
+In Visual Studio: **Git -> Clone Repository**, paste
 `https://github.com/Sumo77/SoftwareQuality-Assignment1.git`, pick a local folder
 and click **Clone**.
 
-Already have it locally? **File → Open → Project/Solution** and select
+Already have it locally? **File -> Open -> Project/Solution** and select
 `SoftwareQuality-Assignment1.slnx`.
 
 **2. Restore packages**
@@ -69,14 +70,14 @@ solution in Solution Explorer and choose **Restore NuGet Packages**.
 
 **3. Build**
 
-**Build → Build Solution**, or Ctrl+Shift+B. Check the Output window for errors.
+**Build -> Build Solution**, or Ctrl+Shift+B. Check the Output window for errors.
 
 This also copies `DatabaseSchema.sql` and `SampleData.sql` into the output
-folders, which the app needs at runtime.
+folders, which the app needs on run.
 
 **4. Set the startup project**
 
-Right-click `LibraryQA` in Solution Explorer → **Set as Startup Project**. It
+Right-click `LibraryQA` in Solution Explorer -> **Set as Startup Project**. It
 should turn bold. Getting this wrong is the most common reason F5 does nothing
 useful - `LibraryQA.Core` and `LibraryQA.Tests` are libraries and can't run.
 
@@ -91,7 +92,8 @@ sample data. Later launches reuse it.
 
 Sign in as a member account for the member view (i.e `alice.member` / `member123`), 
 or staff account for the staff view (i.e `jane.staff` / `staff456`).
-Full list in the root README.
+
+Full list for sign-in information is located in the root README.
 
 ---
 
@@ -103,7 +105,7 @@ In Terminal:
 dotnet test
 ```
 
-In Visual Studio: **Test → Test Explorer → Run All**.
+In Visual Studio: **Test -> Test Explorer -> Run All**.
 
 Each test builds its own temporary database and deletes it afterwards, so the
 tests do not touch `library.db` and can be run in any order.
@@ -124,14 +126,14 @@ Close DB Browser before running the app again - it holds a lock on the file.
 
 ---
 
-## Resetting the database
+## Resetting the local changes made in the app
 
-Delete `library.db` from the output folder and run the app again. It will be
-recreated and reseeded from the SQL scripts.
+Delete `library.db` from the output folder and run the app again. The database will be
+recreated and repopulated from the SQL scripts good as new.
 
 ---
 
-## Troubleshooting
+## Troubleshooting - Section helped by AI Debugging
 
 **"The current .NET SDK does not support targeting .NET x"**
 You are on an older SDK. Install .NET 8 or later from

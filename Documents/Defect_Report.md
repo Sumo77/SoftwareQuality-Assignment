@@ -4,7 +4,7 @@ Defects found during development and testing.
 
 **Severity:** 
 - Critical (interupts core functionality)
-- High (wrong behaviour, workaround exists)
+- High (wrong behaviour needing correction but a workaround exists)
 - Medium (minor incorrect behaviour)
 - Low (cosmetic or documentation)
 
@@ -20,7 +20,7 @@ Defects found during development and testing.
 
 | | |
 |---|---|
-| **Title** | Documented and inputed password hashes do not match the actual password |
+| **Title** | Database stored password hashes do not match the actual documented passwords |
 | **Severity** | High |
 | **Status** | Resolved |
 | **Found by** | Summer |
@@ -31,7 +31,7 @@ Defects found during development and testing.
 
 The documentation listed `5e884898da28…` as the hash for `member123`. That value
 is actually SHA256 of the literal string `"password"` and appears nowhere in the
-database.
+database. Probably an AI generation error.
 
 **Root cause:**
 
@@ -52,7 +52,7 @@ consolidated so there is one place to keep accurate rather than three.
 | **Title** | Book status not restored when a loan is returned |
 | **Severity** | High |
 | **Status** | Resolved |
-| **Found by** | Summer |
+| **Found by** | Daria |
 | **Found in** | `StaffView.ReturnButton_Click` |
 | **Related** | REQ-2b (Return), REQ-14 (Integrity) |
 
@@ -82,8 +82,8 @@ reservation exists, and Available otherwise.
 |---|---|
 | **Title** | Reservation is not marked fulfilled when the reserved item is returned |
 | **Severity** | Medium |
-| **Status** | Open — deferred to next phase |
-| **Found by** | Summer |
+| **Status** | Open - To Do Next |
+| **Found by** | John |
 | **Found in** | `StaffView.ReturnButton_Click` / `Reservations` table |
 | **Related** | REQ-3 (Reservations), REQ-14 (Integrity) |
 
@@ -104,7 +104,7 @@ return flow.
 
 **Fix:**
 
-Deferred. Marking a reservation fulfilled requires a collection workflow — the
+Delayed, to do next. Marking a reservation fulfilled requires a collection workflow — the
 reserving member must claim the item, and there must be a rule for expiry if they
 do not. Both are outside the current prototype scope. The status transition
 itself is correct and tested; only reservation closure is outstanding.
@@ -118,7 +118,7 @@ itself is correct and tested; only reservation closure is outstanding.
 |---|---|
 | **Title** | Error presentation is inconsistent across the three interfaces |
 | **Severity** | Low |
-| **Status** | Open — deferred to next phase |
+| **Status** | Open - To Do Next |
 | **Found by** | Summer |
 | **Found in** | `LoginView`, `MemberView`, `StaffView` |
 | **Related** | REQ-10 (Usability), REQ-12 (Reliability) |
@@ -128,20 +128,20 @@ itself is correct and tested; only reservation closure is outstanding.
 The three interfaces report errors in different ways. Login uses inline text
 beneath the form, Member view uses blocking `MessageBox` dialogs, and Staff view
 uses an inline status line. A user moving between views encounters three
-different conventions for the same kind of feedback.
+different conventions for the same kind of feedback, which can be confusing.
 
 **Root cause:**
 
 The interfaces were built in parallel on separate branches without an agreed
 convention for user feedback. Each developer chose a reasonable pattern
-independently.
+independently. The result is inconsistent, but not incorrect.
 
 **Fix:**
 
-Deferred. Both patterns are arguably correct in context — dialogs suit one-off
+Delayed, to do next. In context it's correct, dialogs suit one-off
 member actions requiring acknowledgement, inline status suits staff processing
 transactions in sequence. The next phase will agree a single convention and
-document it, so the choice is deliberate rather than incidental.
+document it, to keep things consistent across the application.
 
 ---
 
@@ -149,7 +149,7 @@ document it, so the choice is deliberate rather than incidental.
 
 | ID | Title | Severity | Status |
 |---|---|---|---|
-| DEF-01 | Documented password hashes wrong | Critical | Fixed |
+| DEF-01 | Database stored password hashes do not match the actual documented passwords | Critical | Fixed |
 | DEF-02 | Book status not restored when a loan is returned | High | Resolved |
 | DEF-03 | Reservation not marked fulfilled when reserved item is returned | Medium | Open |
 | DEF-04 | Error presentation is inconsistent across the three interfaces | Low | Open |

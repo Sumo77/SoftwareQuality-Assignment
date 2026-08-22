@@ -6,8 +6,7 @@ using LibraryQA.Core.Models;
 
 namespace LibraryQA.Core.Services
 {
-    /// Verifies credentials against the Accounts table and resolves the role.
-    /// Lives in Core, not the UI, so it can be unit tested without WPF.
+    // Authentication Service, verifies credentials against the Accounts table and resolves the role
     public class AuthenticationService
     {
         private const string StaffRole = "Staff";
@@ -46,8 +45,8 @@ namespace LibraryQA.Core.Services
             byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(password));
             return Convert.ToHexString(hash).ToLowerInvariant();
         }
-        //matching method 
-        public int? GetAccountId(string username)
+
+        public int? GetAccountId(string username) // Returns the account ID for a given username, or null if the username does not exist
         {
             if (string.IsNullOrWhiteSpace(username))
                 return null;

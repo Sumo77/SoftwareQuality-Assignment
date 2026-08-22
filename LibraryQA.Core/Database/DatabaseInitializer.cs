@@ -4,26 +4,21 @@ using System.IO;
 
 namespace LibraryQA.Core.Database
 {
-    /// Handles database initialization and schema creation for the Library Management System.
-    /// This class reads and executes the DatabaseSchema.sql script to create all tables,
-    /// indexes, and constraints in the SQLite database.
+    // Database initialiser, handles database initialization and schema creation for the Library Management System.
+    // This class reads and executes the DatabaseSchema.sql script to create all tables,
+    // indexes, and constraints in the SQLite database.
     public class DatabaseInitializer
     {
         private readonly string _connectionString;
         private readonly string _databasePath;
 
-        
-        /// Initializes a new instance of DatabaseInitializer with the specified database path.
-        public DatabaseInitializer(string databasePath)
+        public DatabaseInitializer(string databasePath) // Initializes a new instance of DatabaseInitializer with the specified database path.
         {
             _databasePath = databasePath ?? throw new ArgumentNullException(nameof(databasePath));
             _connectionString = $"Data Source={databasePath}";
         }
 
-        
-        /// Creates the database file and initializes the schema by executing DatabaseSchema.sql.
-        /// If the database already exists, it will be dropped and recreated.
-        public bool InitializeDatabase()
+        public bool InitializeDatabase() // Initializes the database by creating the database file and executing the schema script.
         {
             try
             {
@@ -75,9 +70,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        
-        /// Checks if the database file exists and contains the required tables.
-        public bool DatabaseExists()
+        public bool DatabaseExists() // Checks if the database file exists and contains the expected tables.
         {
             if (!File.Exists(_databasePath))
             {
@@ -90,7 +83,6 @@ namespace LibraryQA.Core.Database
                 {
                     connection.Open();
 
-                    // Check if core tables exist
                     string[] expectedTables = { "Accounts", "Books", "Loans", "Reservations" };
 
                     using (var command = connection.CreateCommand())
@@ -116,10 +108,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        
-        /// Drops and recreates the database with fresh schema.
-        /// WARNING: This will delete all existing data.
-        public bool ResetDatabase()
+        public bool ResetDatabase() // Resets the database by deleting the existing database file and reinitializing it with a fresh schema
         {
             try
             {
@@ -141,10 +130,10 @@ namespace LibraryQA.Core.Database
         }
 
         
-        /// Gets the connection string for the configured database.
+        // Gets the connection string for the configured database.
         public string ConnectionString => _connectionString;
 
-        /// Gets the full path to the database file.
+        // Gets the full path to the database file.
         public string DatabasePath => _databasePath;
     }
 }

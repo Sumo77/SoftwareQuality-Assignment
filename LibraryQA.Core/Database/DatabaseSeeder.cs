@@ -5,15 +5,13 @@ using System.IO;
 namespace LibraryQA.Core.Database
 {
     
-    /// Populates an initialised database with the sample data set.
-    /// DatabaseInitializer creates the schema; this class fills it.
+    // Database Seeder, populates an initialised database with the sample data set.
+    // DatabaseInitializer creates the schema, this seed / populates it.
     public class DatabaseSeeder
     {
         private readonly string _connectionString;
 
-        
-        /// Initializes a new instance of DatabaseSeeder for the specified database file.
-        public DatabaseSeeder(string databasePath)
+        public DatabaseSeeder(string databasePath) // Initializes a new instance of DatabaseSeeder for the specified database file
         {
             if (databasePath == null)
             {
@@ -23,11 +21,7 @@ namespace LibraryQA.Core.Database
             _connectionString = $"Data Source={databasePath}";
         }
 
-        
-        /// Executes SampleData.sql against the database.
-        /// Assumes the schema already exists and the tables are empty -
-        /// running this twice will create duplicate rows.
-        public bool SeedSampleData()
+        public bool SeedSampleData() // Seeds the database with sample data from the SampleData.sql file
         {
             try
             {
@@ -51,8 +45,7 @@ namespace LibraryQA.Core.Database
                         command.ExecuteNonQuery();
                     }
 
-                    // Wrap in a transaction so a failure part-way through leaves
-                    // no half-populated database behind.
+                    // Wrap in a single transaction so a failure part-way through leaves no half-populated database behind.
                     using (var transaction = connection.BeginTransaction())
                     using (var command = connection.CreateCommand())
                     {

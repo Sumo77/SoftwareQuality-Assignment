@@ -1,5 +1,6 @@
 ﻿namespace LibraryQA.Models
 {
+    // Stores one current reservation's details for display purposes
     public class MyReservationDisplayModel
     {
         public int ReservationID { get; set; }
