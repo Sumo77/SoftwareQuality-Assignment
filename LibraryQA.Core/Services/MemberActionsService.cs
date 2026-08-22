@@ -70,7 +70,7 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult
                     {
                         Success = false,
-                        Message = "This book is currently available! — You may borrow it directly instead of reserving it."
+                        Message = "This book is currently available! - You may borrow it directly instead of reserving it."
                     };
                 }
 

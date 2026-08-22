@@ -149,7 +149,7 @@ document it, to keep things consistent across the application.
 
 | ID | Title | Severity | Status |
 |---|---|---|---|
-| DEF-01 | Database stored password hashes do not match the actual documented passwords | Critical | Fixed |
+| DEF-01 | Database stored password hashes do not match the actual documented passwords | High | Fixed |
 | DEF-02 | Book status not restored when a loan is returned | High | Resolved |
 | DEF-03 | Reservation not marked fulfilled when reserved item is returned | Medium | Open |
 | DEF-04 | Error presentation is inconsistent across the three interfaces | Low | Open |
