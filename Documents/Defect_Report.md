@@ -133,15 +133,42 @@ different conventions for the same kind of feedback, which can be confusing.
 **Root cause:**
 
 The interfaces were built in parallel on separate branches without an agreed
-convention for user feedback. Each developer chose a reasonable pattern
+convention for user feedback. Each developer chose a resonable choice
 independently. The result is inconsistent, but not incorrect.
 
 **Fix:**
 
-Delayed, to do next. In context it's correct, dialogs suit one-off
-member actions requiring acknowledgement, inline status suits staff processing
-transactions in sequence. The next phase will agree a single convention and
+Delayed, to do next. The next phase will agree a single convention and
 document it, to keep things consistent across the application.
+
+---
+
+## DEF-04
+
+| | |
+|---|---|
+| **Title** | Partially entered sample data |
+| **Severity** | Medium |
+| **Status** | Open - To Do Next |
+| **Found by** | Summer |
+| **Found in** | `Database` |
+| **Related** | REQ-14 (Integrity) |
+
+**Description:**
+
+During the generation of the database, there must have been
+partial generation of some inputs. Someone labeled a book as "On Loan" but did not 
+create a corresponding loan record, so the book is effectively lost to the catalogue. 
+Similarly, a reservation was created and is partially stored the same way.
+
+**Root cause:**
+
+Likely an AI generation error on initial development that was overlooked.
+
+**Fix:**
+
+Delayed, to do next. This is a simple fix, but the whole database should go under review
+to ensure that no other sample data has been effected in the same.
 
 ---
 
@@ -153,3 +180,4 @@ document it, to keep things consistent across the application.
 | DEF-02 | Book status not restored when a loan is returned | High | Resolved |
 | DEF-03 | Reservation not marked fulfilled when reserved item is returned | Medium | Open |
 | DEF-04 | Error presentation is inconsistent across the three interfaces | Low | Open |
+| DEF-05 | Partially entered sample data | Medium | Open |
