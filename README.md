@@ -24,7 +24,7 @@ This structure keeps user interface logic (frontend) and business rules and data
 
 ## Running the app
 
-Clone the repository, open in a terminal or compatible interface (such as Visual Studio 2022 17.8 or later) and run the `LibraryQA` project.
+Clone the repository, open in a terminal or compatible interface (such as Visual Studio 2022 17.8 or later) and run the `LibraryQA` project (and/or 'Set as Startup Project').
 
 Else (optionally), run with the following commands:
 

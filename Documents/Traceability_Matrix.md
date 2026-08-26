@@ -36,7 +36,7 @@ complete.
 | REQ-6 | Staff Portal | Functional | TC-2, TC-4 | Yes |
 | REQ-7 | Access Control | Functional | TC-1, TC-2, TC-7 | Yes |
 | REQ-8 | Loan Limits | Functional | TC-10 | Yes |
-| REQ-9 | Input Validation | Functional | | No |
+| REQ-9 | Input Validation | Functional | TC-5 | Partial |
 | REQ-10 | Usability | Non-Functional | Usability walkthrough | Informal |
 | REQ-11 | Security | Non-Functional | TC-2, TC-3, TC-7 | Yes |
 | REQ-12 | Reliability | Non-Functional | TC-3 | Yes |
@@ -49,5 +49,5 @@ complete.
 ## Notes:
 
 While test cases aim to cover all requirements, some requirements are not entirely covered or fulfilled by the current set of test cases. 
-Additional test cases may be needed to ensure complete coverage, particularly for requirements related to 
+Additional test cases will be needed to ensure complete coverage, particularly for requirements related to 
 catalogue management, overdue handling, input validation, and performance.
