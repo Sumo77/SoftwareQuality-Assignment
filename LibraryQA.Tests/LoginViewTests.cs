@@ -36,6 +36,7 @@ namespace LibraryQA.Tests
 
         // TC-1: Valid Member Login resolves as role = Member (REQ-5, REQ-7)
         [TestMethod]
+        [TestCategory("Smoke")]
         public void Authenticate_ValidMemberCredentials_ReturnsMemberRole()
         {
             UserRole? result = _auth.Authenticate("alice.member", "member123");
@@ -45,6 +46,7 @@ namespace LibraryQA.Tests
 
         // TC-2: Valid Staff Login resolves as role = Staff (REQ-6, REQ-7, REQ-11)
         [TestMethod]
+        [TestCategory("Smoke")]
         public void Authenticate_ValidStaffCredentials_ReturnsStaffRole()
         {
             UserRole? result = _auth.Authenticate("jane.staff", "staff456");

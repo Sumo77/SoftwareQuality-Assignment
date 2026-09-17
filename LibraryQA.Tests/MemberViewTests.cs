@@ -36,6 +36,7 @@ namespace LibraryQA.Tests
 
         // TC-8: Borrowing an "available" book sets a due date to 14 days from current date and changes status to "on loan" (REQ-2a, REQ-14)
         [TestMethod]
+        [TestCategory("Smoke")]
         public void BorrowBook_AvailableBook_SetsDueDateAndUpdatesStatus()
         {
             var result = _service.BorrowBook(bookId: 1, memberId: 1);

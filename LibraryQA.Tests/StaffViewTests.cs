@@ -69,6 +69,7 @@ namespace LibraryQA.Tests
 
         // TC-6: Closes an active loan (LoanID 3, BookID 7, MemberID 1) by recording a return date (REQ-2)
         [TestMethod]
+        [TestCategory("Smoke")]
         public void ProcessReturn_ActiveLoan_RecordsReturnCloseToRealTime()
         {
             using (var db = new DatabaseHelper(_connectionString))
