@@ -20,8 +20,11 @@ namespace LibraryQA.Tests
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"membertest_{Guid.NewGuid()}.db");
-            new DatabaseInitializer(_dbPath).InitializeDatabase();
-            new DatabaseSeeder(_dbPath).SeedSampleData();
+            
+            Assert.IsTrue(new DatabaseInitializer(_dbPath).InitializeDatabase(),
+                "Database schema could not be created - check DatabaseSchema.sql is in the test output folder.");
+            Assert.IsTrue(new DatabaseSeeder(_dbPath).SeedSampleData(),
+                "Sample data could not be loaded - check SampleData.sql is in the test output folder.");
 
             _connectionString = $"Data Source={_dbPath}";
             _service = new MemberActionsService(_connectionString);
