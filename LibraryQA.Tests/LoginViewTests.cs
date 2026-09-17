@@ -21,8 +21,10 @@ namespace LibraryQA.Tests
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"logintest_{Guid.NewGuid()}.db");
 
-            new DatabaseInitializer(_dbPath).InitializeDatabase();
-            new DatabaseSeeder(_dbPath).SeedSampleData();
+            Assert.IsTrue(new DatabaseInitializer(_dbPath).InitializeDatabase(),
+                "Database schema could not be created - check DatabaseSchema.sql is in the test output folder.");
+            Assert.IsTrue(new DatabaseSeeder(_dbPath).SeedSampleData(),
+                "Sample data could not be loaded - check SampleData.sql is in the test output folder.");
 
             _auth = new AuthenticationService($"Data Source={_dbPath}");
         }
@@ -36,6 +38,7 @@ namespace LibraryQA.Tests
 
         // TC-1: Valid Member Login resolves as role = Member (REQ-5, REQ-7)
         [TestMethod]
+        [TestCategory("Smoke")]
         public void Authenticate_ValidMemberCredentials_ReturnsMemberRole()
         {
             UserRole? result = _auth.Authenticate("alice.member", "member123");
@@ -45,6 +48,7 @@ namespace LibraryQA.Tests
 
         // TC-2: Valid Staff Login resolves as role = Staff (REQ-6, REQ-7, REQ-11)
         [TestMethod]
+        [TestCategory("Smoke")]
         public void Authenticate_ValidStaffCredentials_ReturnsStaffRole()
         {
             UserRole? result = _auth.Authenticate("jane.staff", "staff456");

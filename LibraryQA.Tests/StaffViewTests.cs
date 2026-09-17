@@ -20,8 +20,11 @@ namespace LibraryQA.Tests
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"staffviewtest_{Guid.NewGuid()}.db");
-            new DatabaseInitializer(_dbPath).InitializeDatabase();
-            new DatabaseSeeder(_dbPath).SeedSampleData();
+
+            Assert.IsTrue(new DatabaseInitializer(_dbPath).InitializeDatabase(),
+                "Database schema could not be created - check DatabaseSchema.sql is in the test output folder.");
+            Assert.IsTrue(new DatabaseSeeder(_dbPath).SeedSampleData(),
+                "Sample data could not be loaded - check SampleData.sql is in the test output folder.");
 
             _connectionString = $"Data Source={_dbPath}";
         }
@@ -69,6 +72,7 @@ namespace LibraryQA.Tests
 
         // TC-6: Closes an active loan (LoanID 3, BookID 7, MemberID 1) by recording a return date (REQ-2)
         [TestMethod]
+        [TestCategory("Smoke")]
         public void ProcessReturn_ActiveLoan_RecordsReturnCloseToRealTime()
         {
             using (var db = new DatabaseHelper(_connectionString))

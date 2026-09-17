@@ -28,7 +28,7 @@ namespace LibraryQA.Views
         private void LoginButton_Click(object sender, RoutedEventArgs e)
         {
             ClearError(); // Prevents stale errors from previous attempts
-            
+
             string username = UsernameBox.Text.Trim(); // Retrieve user input (from username and password boxes)
             string password = PasswordBox.Password;
 

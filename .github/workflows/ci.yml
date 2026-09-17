@@ -1,0 +1,38 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest # Windows Specific (WPF only builds on Windows)
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x   # newer SDK can read the .slnx file, and still builds the net8.0 projects
+
+      - name: Restore Packages
+        run: dotnet restore SoftwareQuality-Assignment.slnx
+
+      - name: Check Build Status (Success / Failure)
+        run: dotnet build SoftwareQuality-Assignment.slnx --no-restore --configuration Release
+
+      - name: Check Code Formatting (Light Linting)
+        run: dotnet format SoftwareQuality-Assignment.slnx --verify-no-changes --no-restore
+
+      - name: Smoke Tests (Quick Test Run)
+        run: dotnet test SoftwareQuality-Assignment.slnx --no-build --configuration Release --filter "TestCategory=Smoke"
+
+      - name: All Tests + Code Coverage
+        run: dotnet test SoftwareQuality-Assignment.slnx --no-build --configuration Release --collect:"XPlat Code Coverage" --logger trx --results-directory TestResults
+
+      - name: Save Test Results + Coverage Report
+        if: always() # Always upload test results, even if the tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
