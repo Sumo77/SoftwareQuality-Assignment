@@ -1,0 +1,36 @@
+# Save this file in the repo as: .github/workflows/ci.yml
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest   # WPF only builds on Windows
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x   # newer SDK can read the .slnx file, and still builds the net8.0 projects
+
+      - name: Restore packages
+        run: dotnet restore SoftwareQuality-Assignment.slnx
+
+      - name: Build
+        run: dotnet build SoftwareQuality-Assignment.slnx --no-restore --configuration Release
+
+      - name: Smoke tests
+        run: dotnet test SoftwareQuality-Assignment.slnx --no-build --configuration Release --filter "TestCategory=Smoke"
+
+      - name: All tests + code coverage
+        run: dotnet test SoftwareQuality-Assignment.slnx --no-build --configuration Release --collect:"XPlat Code Coverage" --logger trx --results-directory TestResults
+
+      - name: Save test results + coverage report
+        if: always()   # upload even when tests fail, so you can see why
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: TestResults
