@@ -4,7 +4,7 @@ using System.IO;
 
 namespace LibraryQA.Core.Database
 {
-    
+
     // Database Seeder, populates an initialised database with the sample data set.
     // DatabaseInitializer creates the schema, this seed / populates it.
     public class DatabaseSeeder

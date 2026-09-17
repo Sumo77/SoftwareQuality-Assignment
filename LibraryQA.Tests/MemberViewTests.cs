@@ -20,7 +20,7 @@ namespace LibraryQA.Tests
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"membertest_{Guid.NewGuid()}.db");
-            
+
             Assert.IsTrue(new DatabaseInitializer(_dbPath).InitializeDatabase(),
                 "Database schema could not be created - check DatabaseSchema.sql is in the test output folder.");
             Assert.IsTrue(new DatabaseSeeder(_dbPath).SeedSampleData(),
@@ -89,11 +89,11 @@ namespace LibraryQA.Tests
                 var aliceLoans = db.GetActiveLoans(memberId: 1);
                 var bobLoans = db.GetActiveLoans(memberId: 2);
 
-                Assert.AreEqual(1, aliceLoans.Count);
+                Assert.HasCount(1, aliceLoans);
                 Assert.IsFalse(aliceLoans.Exists(l =>
                     Convert.ToInt32(l["BookID"]) == 8 || Convert.ToInt32(l["BookID"]) == 10));
 
-                Assert.AreEqual(2, bobLoans.Count);
+                Assert.HasCount(2, bobLoans);
                 Assert.IsFalse(bobLoans.Exists(l => Convert.ToInt32(l["BookID"]) == 7));
             }
         }

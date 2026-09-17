@@ -20,7 +20,7 @@ namespace LibraryQA.Tests
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"staffviewtest_{Guid.NewGuid()}.db");
-            
+
             Assert.IsTrue(new DatabaseInitializer(_dbPath).InitializeDatabase(),
                 "Database schema could not be created - check DatabaseSchema.sql is in the test output folder.");
             Assert.IsTrue(new DatabaseSeeder(_dbPath).SeedSampleData(),
