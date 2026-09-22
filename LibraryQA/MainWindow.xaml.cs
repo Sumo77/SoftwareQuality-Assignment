@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using LibraryQA.Core.Models;
 using LibraryQA.Core.Services;
 using LibraryQA.Views;
@@ -7,6 +8,11 @@ namespace LibraryQA
 {
     public partial class MainWindow : Window
     {
+        // Extracted so the role->view routing decision can be verified in isolation (REQ-7, REQ-11).
+        public static Type ResolveViewType(UserRole role)
+        {
+            return role == UserRole.Staff ? typeof(StaffView) : typeof(MemberView);
+        }
         public MainWindow()
         {
             InitializeComponent();
@@ -37,7 +43,7 @@ namespace LibraryQA
                 return;
             }
 
-            if (role == UserRole.Staff)
+            if (ResolveViewType(role) == typeof(StaffView))
             {
                 var staffView = new StaffView();
                 staffView.LogoutRequested += (_, _) => ShowLogin();

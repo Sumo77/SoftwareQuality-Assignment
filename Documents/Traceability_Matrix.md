@@ -13,10 +13,10 @@ complete.
 | TC-1 | Valid member credentials return the Member role | Unit | Summer | Pass |
 | TC-2 | Valid staff credentials return the Staff role | Unit | Summer | Pass |
 | TC-3 | Correct username with wrong password is rejected | Unit | Summer | Pass |
-| TC-4 | Staff view shows the correct active reservation count | Unit | John | Pass |
-| TC-5 | Issue loan with an invalid book ID shows a warning | Unit | John | Pass |
-| TC-6 | Return button closes the loan and updates status | Integration | John | Pass |
-| TC-7 | Member account is denied access to staff features | Unit | John | Pass |
+| TC-4 | `GetTotalActiveReservationsCount` returns the correct count after a new reservation is added | Unit | John | Pass |
+| TC-5 | Issue loan with an invalid book ID is rejected by `CreateLoan` without creating a loan record | Unit | John | Pass |
+| TC-6 | Return button closes the loan and updates the book's catalogue status | Integration | John | Pass |
+| TC-7 | A member account resolves only to the Member role, and role routing never sends a member to StaffView | Unit | John | Pass |
 | TC-8 | Borrowing an available book sets a 14-day due date and status "On Loan" | Integration | Daria | Pass |
 | TC-9 | Reserving an already-reserved book is rejected | Unit | Daria | Pass |
 | TC-10 | Member at the 2-loan limit is prevented from borrowing a 3rd | Unit | Daria | Pass |

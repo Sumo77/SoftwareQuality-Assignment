@@ -1,8 +1,10 @@
 using System;
 using System.IO;
+using LibraryQA;
 using LibraryQA.Core.Database;
 using LibraryQA.Core.Models;
 using LibraryQA.Core.Services;
+using LibraryQA.Views;
 using Microsoft.Data.Sqlite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -33,7 +35,8 @@ namespace LibraryQA.Tests
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
         }
 
-        // TC-4: Adding (third) reservation, so staff's active reservation count returns with the new addition (REQ-6)
+        // TC-4: GetTotalActiveReservationsCount reflects a newly added (third) reservation (REQ-6).
+        // Note: this is a data-layer test - it does not exercise StaffView's UI display.
         [TestMethod]
         public void GetTotalActiveReservationsCount_ThreeActiveReservationsSeeded_ReturnsThree()
         {
@@ -67,15 +70,18 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-6: Closes an active loan (LoanID 3, BookID 7, MemberID 1) by recording a return date (REQ-2)
+        // TC-6: Closes an active loan (LoanID 3, BookID 7, MemberID 1) by recording a return date
+        // and updates the book's catalogue status accordingly (REQ-2, REQ-14)
         [TestMethod]
-        public void ProcessReturn_ActiveLoan_RecordsReturnCloseToRealTime()
+        public void ProcessReturn_ActiveLoan_RecordsReturnAndUpdatesBookStatus()
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
                 var loanBefore = db.GetLoanById(3);
                 Assert.IsNotNull(loanBefore, "Precondition check: loan should exist.");
                 Assert.AreEqual(DBNull.Value, loanBefore!["ReturnDate"], "Precondition check: loan should be active (unreturned).");
+
+                int bookId = Convert.ToInt32(loanBefore["BookID"]);
 
                 DateTime beforeCall = DateTime.Now;
                 bool success = db.ProcessReturn(loanId: 3, returnDate: DateTime.Now.Date);
@@ -88,12 +94,18 @@ namespace LibraryQA.Tests
 
                 // The recorded return date should fall within the window the call was made, so the return is processed close to real time.
                 Assert.IsTrue(returnDate.Date >= beforeCall.Date && returnDate.Date <= afterCall.Date);
+
+                // The book's catalogue status must also reflect the return (Available, or Reserved if a hold exists).
+                var book = db.GetBookById(bookId);
+                string expectedStatus = db.HasActiveReservation(bookId) ? "Reserved" : "Available";
+                Assert.AreEqual(expectedStatus, book!["Status"]?.ToString());
             }
         }
 
-        // TC-7: A member account never resolves to Staff, so MainWindow never opens StaffView for them (REQ-7, REQ-11)
+        // TC-7: A member account resolves only to the Member role, and role-based routing sends
+        // Member accounts to MemberView, never StaffView (REQ-7, REQ-11)
         [TestMethod]
-        public void Authenticate_MemberAccount_DoesNotResolveToStaffRole()
+        public void Authenticate_MemberAccount_ResolvesToMemberRoleOnly()
         {
             var auth = new AuthenticationService(_connectionString);
 
@@ -101,6 +113,25 @@ namespace LibraryQA.Tests
 
             Assert.AreEqual(UserRole.Member, role);
             Assert.AreNotEqual(UserRole.Staff, role, "A member account must never be granted the Staff role.");
+        }
+
+        // TC-7b: The role -> view routing decision itself denies staff features to Member accounts,
+        // regardless of what Authenticate returns (REQ-7, REQ-11)
+        [TestMethod]
+        public void ResolveViewType_MemberRole_NeverResolvesToStaffView()
+        {
+            var viewType = MainWindow.ResolveViewType(UserRole.Member);
+
+            Assert.AreNotEqual(typeof(StaffView), viewType, "A member role must never be routed to StaffView.");
+            Assert.AreEqual(typeof(MemberView), viewType);
+        }
+
+        [TestMethod]
+        public void ResolveViewType_StaffRole_ResolvesToStaffView()
+        {
+            var viewType = MainWindow.ResolveViewType(UserRole.Staff);
+
+            Assert.AreEqual(typeof(StaffView), viewType);
         }
     }
 }
