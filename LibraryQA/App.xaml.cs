@@ -10,7 +10,7 @@ namespace LibraryQA
     /// Interaction logic for App.xaml
     public partial class App : Application
     {
-        
+
         /// Full path to the SQLite database file, in the application's output folder.
         public static string DatabasePath { get; } = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "library.db");

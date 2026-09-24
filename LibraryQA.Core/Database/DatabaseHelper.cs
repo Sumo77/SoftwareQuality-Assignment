@@ -98,7 +98,7 @@ namespace LibraryQA.Core.Database
                 return result?.ToString();
             }
         }
-        
+
         public Dictionary<string, object>? GetAccountInfo(int accountId) // Retrieves full account information for a given account ID
         {
             OpenConnection();
@@ -720,7 +720,7 @@ namespace LibraryQA.Core.Database
 
         #region Staff Reporting Operations
 
-        
+
         /// Gets statistics for staff dashboard/reporting.
         public Dictionary<string, int> GetStaffStatistics()
         {
@@ -757,7 +757,7 @@ namespace LibraryQA.Core.Database
             return stats;
         }
 
-        
+
         /// Gets the most frequently borrowed books (staff reporting).
         public List<Dictionary<string, object>> GetMostBorrowedBooks(int topN = 10)
         {
