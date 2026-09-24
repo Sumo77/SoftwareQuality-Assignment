@@ -97,5 +97,24 @@ namespace LibraryQA.Tests
                 Assert.IsFalse(bobLoans.Exists(l => Convert.ToInt32(l["BookID"]) == 7));
             }
         }
+
+        // TC-12: Searching for a literal LIKE wildcard character ("%" or "_") does not match every
+        // book in the catalogue - it only matches titles/authors/ISBNs that actually contain it (REQ-4)
+        [TestMethod]
+        public void SearchCatalogue_WildcardCharacters_DoNotMatchEveryBook()
+        {
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                int totalBooks = db.SearchCatalogue("").Count;
+
+                var percentResults = db.SearchCatalogue("%");
+                var underscoreResults = db.SearchCatalogue("_");
+
+                Assert.IsTrue(percentResults.Count < totalBooks,
+                    "Searching for a literal '%' should not match every book in the catalogue.");
+                Assert.IsTrue(underscoreResults.Count < totalBooks,
+                    "Searching for a literal '_' should not match every book in the catalogue.");
+            }
+        }
     }
 }

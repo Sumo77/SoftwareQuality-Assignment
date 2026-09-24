@@ -145,6 +145,7 @@ namespace LibraryQA.Views
             var reservations = db.GetAllActiveReservations()
                 .Select(row => new ReservationItem // Map each row from the database to a ReservationItem object
                 {
+                    ReservationId = Convert.ToInt32(row["ReservationID"]),
                     Title = row["Title"]?.ToString() ?? "",
                     BookId = Convert.ToInt32(row["BookID"]),
                     MemberName = row["MemberName"]?.ToString() ?? "",
@@ -154,6 +155,27 @@ namespace LibraryQA.Views
                 .ToList();
 
             ReservationsListView.ItemsSource = reservations;
+        }
+
+        private void FulfilButton_Click(object sender, RoutedEventArgs e) // Marks a held reservation as collected: closes the reservation and issues the loan for the collecting member
+        {
+            if (!int.TryParse(ReservationIdBox.Text.Trim(), out int reservationId)) // Validate that the Reservation ID is numeric
+            {
+                ShowReservationStatus("Please enter a valid numeric Reservation ID.", isError: true);
+                return;
+            }
+
+            using var db = new DatabaseHelper(App.ConnectionString);
+
+            var loanId = db.FulfillReservation(reservationId, DateTime.Now.Date, LoanPeriodDays);
+            if (loanId == null) // Check if the reservation could be fulfilled
+            {
+                ShowReservationStatus($"Reservation #{reservationId} could not be fulfilled. It may not exist, already be fulfilled, or the book may not yet be held for collection.", isError: true);
+                return;
+            }
+
+            ShowReservationStatus($"Reservation #{reservationId} fulfilled - Loan #{loanId} issued.", isError: false);
+            RefreshAllData();
         }
 
         private void LoadReporting() // Load reporting statistics and the most borrowed books, then display them in the interface
@@ -184,6 +206,14 @@ namespace LibraryQA.Views
                 : System.Windows.Media.Brushes.Green;
         }
 
+        private void ShowReservationStatus(string message, bool isError) // Display a status message for reservation fulfilment, with different formatting for errors and success messages
+        {
+            ReservationStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
+            ReservationStatusText.Foreground = isError
+                ? System.Windows.Media.Brushes.Red
+                : System.Windows.Media.Brushes.Green;
+        }
+
         private class OverdueItem // Represents an overdue loan item with relevant details for display in the staff interface
         {
             public int LoanId { get; set; }
@@ -197,6 +227,7 @@ namespace LibraryQA.Views
 
         private class ReservationItem // Represents an active reservation item with relevant details for display in the staff interface
         {
+            public int ReservationId { get; set; }
             public string Title { get; set; } = "";
             public int BookId { get; set; }
             public string MemberName { get; set; } = "";
