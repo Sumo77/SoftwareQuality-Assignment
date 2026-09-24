@@ -189,9 +189,9 @@ to ensure that no other sample data has been effected in the same.
 | **Title** | Reserving a book changes it to "Reserved" while still on loan – it should stay "On Loan". |
 | **Severity** |High |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Daria |
+| **Found in** | `MemberActionsService.ReserveBook()` |
+| **Related** | REQ-2 (Borrow) + REQ-3 (Reservations), REQ-14 (Integrity) |
 
 **Description:**
 
@@ -201,11 +201,12 @@ for some other member after the loan expires for the current user.
 
 **Root cause:**
 
-This was a boundary that was overlooked at the time of development.
+MemberActionsService.ReserveBook() only checks two conditions before executing the reserve. It never never reasons why the book is unavailable.
+It treats both On Loan and reserved the same.
 
 **Fix:**
 
-
+Don't blindly set status to reserved. Only change the status if the current status is not alreadyt on loan or reserved.
 
 ---
 
@@ -216,9 +217,9 @@ This was a boundary that was overlooked at the time of development.
 | **Title** | Staff Issue Loan skips the 2-book limit and doesn't check the member ID. |
 | **Severity** | High |	
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | John |
+| **Found in** | `StaffView.IssueButton_Click` / `DatabaseHelper.CreateLoan` |
+| **Related** | REQ-1 (Issue Loan), REQ-14 (Integrity) |
 
 **Description:**
 
@@ -228,11 +229,11 @@ any checks.
 
 **Root cause:**
 
-
+StaffView.IssueLoanButton_Click() avoids/bypasses MemberActionsService.BorrowBook() completely. This is the method that implements the MaxActiveLoans.
 
 **Fix:**
 
-
+Have The IssueLoanButton method call the MemberActionsService.BorrowBook() method so its already using the pre-existing logic for the limit checks.
 
 ---
 
@@ -243,9 +244,9 @@ any checks.
 | **Title** | Book status is updated twice on borrow + return (the same rule lives in two places). |
 | **Severity** | Low |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `MemberActionsService.BorrowBook` + `StaffView.ReturnButton_Click` / `DatabaseHelper.CreateLoan` + `DatabaseHelper.ProcessReturn` |
+| **Related** | REQ-14 (Integrity) |
 
 **Description:**
 
@@ -254,11 +255,11 @@ This just adding unnecessary steps which could lead to bugs later on.
 
 **Root cause:**
 
-
+This was coded by AI that was not aware of the other function that was already doing the same thing.
 
 **Fix:**
 
-
+Remove the redundant status-update calls since CreateLoan and processReturn already handle the status updates.
 
 ---
 
@@ -269,9 +270,9 @@ This just adding unnecessary steps which could lead to bugs later on.
 | **Title** | Overdue checks use UTC, so loans can be flagged a day late; days overdue differs between member + staff views. |
 | **Severity** | High |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `DatabaseHelper.GetActiveLoans` / `DatabaseHelper.GetAllOverdueLoans` (SQL `julianday('now')`) + `MemberView` / `StaffView` (C# local-time calculations) |
+| **Related** | REQ-2b (Return), REQ-12 (Reliability) |
 
 **Description:**
 
@@ -281,11 +282,11 @@ overdue which can be frutrating to the user.
 
 **Root cause:**
 
-
+As these two parts were developed by two different people, they were not aware of the other part and did not check for consistency.
 
 **Fix:**
 
-
+Decide on one time reference across the whole app so there is no confusion between the two.
 
 ---
 
@@ -296,9 +297,9 @@ overdue which can be frutrating to the user.
 | **Title** | Return condition is never recorded – every return is saved as "Good". |
 | **Severity** | Medium |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | John |
+| **Found in** | `StaffView.ReturnButton_Click` / `DatabaseHelper.ProcessReturn` |
+| **Related** | REQ-2b (Return), REQ-14 (Integrity) |
 
 **Description:**
 
@@ -307,11 +308,11 @@ This can lead to issues where a book is returned in bad condition without the st
 
 **Root cause:**
 
-
+This was overlooked at the time of development and was not included in the requirements. 
 
 **Fix:**
 
-
+Add a UI control on the staff return screen for selecting the condition of the book.
 
 ---
 
@@ -322,9 +323,9 @@ This can lead to issues where a book is returned in bad condition without the st
 | **Title** | Member + Staff views don't catch database errors, so the app could crash. |
 | **Severity** | Medium	|
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `MemberView` (`BorrowButton_Click`, `ReserveButton_Click`, `Load*` methods) + `StaffView` (`IssueButton_Click`, `ReturnButton_Click`, `LoadOverdueItems`) |
+| **Related** | REQ-12 (Reliability) |
 
 **Description:**
 
@@ -333,11 +334,11 @@ or doesn't load, the app could crash.
 
 **Root cause:**
 
-
+An error handle was not implemented at the time of the development.
 
 **Fix:**
 
-
+Wrap the database call sites in both views with try/catch blocks for the SQliteException and display a message to the user that the database is not available/not loading.
 
 ---
 
@@ -348,9 +349,9 @@ or doesn't load, the app could crash.
 | **Title** |  Validation messages don't say which field is wrong. |
 | **Severity** | Low |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `MemberActionsService.ReserveBook` (Member view Reserve form) + `StaffView.IssueButton_Click` (Staff Issue Loan form) |
+| **Related** | REQ-10 (Usability) |
 
 **Description:**
 
@@ -359,11 +360,11 @@ It just says "Invalid input" and does not explain which field was wrong, leaving
 
 **Root cause:**
 
-
+As this is not a functional issue, the developer at the time did not realise that this could be an issue as they would be aware of what they were inputting.
 
 **Fix:**
 
-
+Replace the Invalid input message with a more descriptive message that explains which field was wrongly inputted.
 
 ---
 
@@ -374,9 +375,9 @@ It just says "Invalid input" and does not explain which field was wrong, leaving
 | **Title** | A member can reserve a book they already have on loan. |
 | **Severity** | Low |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Daria |
+| **Found in** | `MemberActionsService.ReserveBook()` |
+| **Related** | REQ-2 (Borrow) + REQ-3 (Reservations), REQ-14 (Integrity) |
 
 **Description:**
 
@@ -385,11 +386,12 @@ by constantly loaning and reserving the same book without allowing other members
 
 **Root cause:**
 
-
+This was another issue where the functionality itself was not broken, however with this current logic it could cause some exploitation.
+This was not part of the quality assurance testing at the tiem of development.
 
 **Fix:**
 
-
+Add a check for MemberActionsService.ReserveBook() that if the member already has the book on loan, they can't reserve it.
 
 ---
 
@@ -400,9 +402,9 @@ by constantly loaning and reserving the same book without allowing other members
 | **Title** | Searching for "%" or "_" matches every book. |
 | **Severity** | Low |
 | **Status** |  |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `DatabaseHelper.SearchCatalogue()` |
+| **Related** | REQ-4 (Search/Catalogue) |
 
 **Description:**
 
@@ -411,11 +413,12 @@ characters could be searched for and return every book.
 
 **Root cause:**
 
-
+searchTerm is concatenated into the SQL LIKE pattern without escaping the LIKE wildcard characters. This is a LIKE-pattern escaping issue and needs these values to escape
+using the ESCAPE clause.
 
 **Fix:**
 
-
+Escape % and _ in searchTerm before wrapping it. and add an ESCAPE clause to each LIKE condition.
 
 ---
 
@@ -426,9 +429,9 @@ characters could be searched for and return every book.
 | **Title** | If sample data fails to load once, the app never retries – the catalogue stays empty. |
 | **Severity** | Low |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `App.xaml.cs` / `DatabaseInitializer.DatabaseExists()` |
+| **Related** | REQ-12 (Reliability), REQ-14 (Integrity) |
 
 **Description:**
 
@@ -438,11 +441,12 @@ the data again.
 
 **Root cause:**
 
-
+DatabaseExists() verifies that the four expected tables exist but doesn't know whether the tables actually contain any rows.
+This is a silent failure that is not reported.
 
 **Fix:**
 
-
+Change DatabaseExists() to check the books table actually has rows and not just that the table exists.
 
 ---
 
@@ -453,9 +457,9 @@ the data again.
 | **Title** | TC-5 doesn't test the app (it would pass even if the app broke); TC-4's name is wrong. |
 | **Severity** | Medium |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |   |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `LibraryQA.Tests/StaffViewTests.cs` (TC-4, TC-5) |
+| **Related** | REQ-6 (Reservation count), REQ-9 (Guard clause) |
 
 **Description:**
 
@@ -464,11 +468,13 @@ TC-4's name is wrong because it is saying that the Staff view shows correct acti
 
 **Root cause:**
 
-
+It does not call db.CreateLoan(). Since this never gets invoked the test would still pass even if the guard clause was removed. 
+It is testing the test's logic instead of the app.
 
 **Fix:**
 
-
+Rewrite TC-5 to call db.CreateLoan() directly so the assertion does do the production guard clause. For TC-4, rename the test that it is a testing the 
+GetTotalActiveREeservationsCount() and add a comment/test area to make clear tit does not test the Staff UI.
 
 ---
 
@@ -479,9 +485,9 @@ TC-4's name is wrong because it is saying that the Staff view shows correct acti
 | **Title** | TC-6 and TC-7 check less than the RTM says they do. |
 | **Severity** | Medium |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `LibraryQA.Tests/StaffViewTests.cs` (TC-6, TC-7) |
+| **Related** | REQ-2 (Return) + REQ-14 (Integrity), REQ-7 + REQ-11 (Access Control) |
 
 **Description:**
 
@@ -490,11 +496,14 @@ TC-7 does not check if it actually denied the Staff privileged features from the
 
 **Root cause:**
 
-
+TC-7's root cause starts from the REQ-7 and REQ-11 having tests that run independently. They authenticate the right role retursn but does not check
+if the StaffView ui is actually denied do non staff users. For TC-6, the assertion copmutes expected status using the same production method
+that ProcessReturn relies on. So if the shared logic is broken the test value would be wrong alongside with the actual value.
 
 **Fix:**
 
-
+TC-6, Replace the db.HasActiveReservation() expectation with a hard coded expect status that has a known seed value. THis will stop it reusing the same logic.
+TC-7 should add a test that actually instantiates StaffView for a membver resolved context and check if the StaffView is actually denied.
 
 ---
 
@@ -505,22 +514,22 @@ TC-7 does not check if it actually denied the Staff privileged features from the
 | **Title** | Tests fail with a confusing error if the database can't be created (e.g. on CI).  |
 | **Severity** | Medium |
 | **Status** | Open |
-| **Found by** |  |
-| **Found in** |  |
-| **Related** |  |
+| **Found by** | Summer |
+| **Found in** | `LibraryQA.Tests/StaffViewTests.cs`, `LoginViewTests.cs`, `MemberViewTests.cs` (`Setup()`) |
+| **Related** | REQ-12 (Reliability) |
 
 **Description:**
 
-Test classes call DatabaseInitializer without checking the boolean return vale and just calls the SeedSampleData() function.
+Test classes call DatabaseInitializer without checking the boolean return value and just calls the SeedSampleData() function.
 If the DatabaseInitializer fails, this will cause the SQLite error message instead of a clear message that the database could not be loaded or created.
 
 **Root cause:**
 
-
+Error handling was skipped for this case. There were no Setup methods that were checking the return value of DatabaseInitializer or the DatabaseSeeder().
 
 **Fix:**
 
-
+Wrapping the Assert messages in Setup() methods to check the return value of DatabaseInitializer() and DatabaseSeeder() and throw a clear message if it fails.
 
 ## Summary
 
