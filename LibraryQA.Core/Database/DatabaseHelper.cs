@@ -147,15 +147,22 @@ namespace LibraryQA.Core.Database
 
             using (var command = _connection!.CreateCommand())
             {
+                // Escape LIKE wildcard characters in the user's search term so that a literal
+                // "%" or "_" is matched literally, rather than being treated as a wildcard.
+                string escapedSearchTerm = searchTerm
+                    .Replace("\\", "\\\\")
+                    .Replace("%", "\\%")
+                    .Replace("_", "\\_");
+
                 command.CommandText = @"
                     SELECT BookID, ISBN, Title, Author, Publisher, PublicationYear, Genre, Status, Description
                     FROM Books 
-                    WHERE Title LIKE @searchTerm 
-                       OR Author LIKE @searchTerm 
-                       OR ISBN LIKE @searchTerm
+                    WHERE Title LIKE @searchTerm ESCAPE '\'
+                       OR Author LIKE @searchTerm ESCAPE '\'
+                       OR ISBN LIKE @searchTerm ESCAPE '\'
                     ORDER BY Title";
 
-                command.Parameters.AddWithValue("@searchTerm", $"%{searchTerm}%");
+                command.Parameters.AddWithValue("@searchTerm", $"%{escapedSearchTerm}%");
 
                 using (var reader = command.ExecuteReader())
                 {
@@ -725,6 +732,104 @@ namespace LibraryQA.Core.Database
 
                 var result = command.ExecuteScalar();
                 return result != null ? Convert.ToInt32(result) : 0;
+            }
+        }
+
+        public int? FulfillReservation(int reservationId, DateTime collectionDate, int loanPeriodDays) // Marks a reservation as fulfilled when the reserving member collects the held book, and issues the loan for it
+        {
+            OpenConnection();
+
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                int bookId;
+                int memberId;
+                using (var lookupCommand = _connection.CreateCommand())
+                {
+                    lookupCommand.Transaction = transaction;
+                    lookupCommand.CommandText = @"
+                        SELECT BookID, MemberID FROM Reservations
+                        WHERE ReservationID = @reservationId AND FulfilledDate IS NULL";
+                    lookupCommand.Parameters.AddWithValue("@reservationId", reservationId);
+
+                    using (var reader = lookupCommand.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            transaction.Rollback();
+                            return null;
+                        }
+
+                        bookId = Convert.ToInt32(reader["BookID"]);
+                        memberId = Convert.ToInt32(reader["MemberID"]);
+                    }
+                }
+
+                // Only collectable if the book has actually been returned and held for this reservation
+                using (var statusCommand = _connection.CreateCommand())
+                {
+                    statusCommand.Transaction = transaction;
+                    statusCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
+                    statusCommand.Parameters.AddWithValue("@bookId", bookId);
+
+                    var status = statusCommand.ExecuteScalar()?.ToString();
+                    if (status != "Reserved")
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+                }
+
+                using (var fulfillCommand = _connection.CreateCommand())
+                {
+                    fulfillCommand.Transaction = transaction;
+                    fulfillCommand.CommandText = @"
+                        UPDATE Reservations
+                        SET FulfilledDate = @fulfilledDate
+                        WHERE ReservationID = @reservationId AND FulfilledDate IS NULL";
+                    fulfillCommand.Parameters.AddWithValue("@fulfilledDate", collectionDate.ToString("yyyy-MM-dd"));
+                    fulfillCommand.Parameters.AddWithValue("@reservationId", reservationId);
+
+                    if (fulfillCommand.ExecuteNonQuery() == 0)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+                }
+
+                int? loanId;
+                using (var loanCommand = _connection.CreateCommand())
+                {
+                    loanCommand.Transaction = transaction;
+                    loanCommand.CommandText = @"
+                        INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate)
+                        VALUES (@bookId, @memberId, @loanDate, @dueDate);
+                        SELECT last_insert_rowid();";
+
+                    loanCommand.Parameters.AddWithValue("@bookId", bookId);
+                    loanCommand.Parameters.AddWithValue("@memberId", memberId);
+                    loanCommand.Parameters.AddWithValue("@loanDate", collectionDate.ToString("yyyy-MM-dd"));
+                    loanCommand.Parameters.AddWithValue("@dueDate", collectionDate.AddDays(loanPeriodDays).ToString("yyyy-MM-dd"));
+
+                    var result = loanCommand.ExecuteScalar();
+                    loanId = result != null ? Convert.ToInt32(result) : (int?)null;
+                }
+
+                if (loanId == null)
+                {
+                    transaction.Rollback();
+                    return null;
+                }
+
+                using (var updateBookCommand = _connection.CreateCommand())
+                {
+                    updateBookCommand.Transaction = transaction;
+                    updateBookCommand.CommandText = "UPDATE Books SET Status = 'On Loan' WHERE BookID = @bookId";
+                    updateBookCommand.Parameters.AddWithValue("@bookId", bookId);
+                    updateBookCommand.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+                return loanId;
             }
         }
 
