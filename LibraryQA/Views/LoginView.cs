@@ -27,21 +27,21 @@ namespace LibraryQA.Views
 
         private void LoginButton_Click(object sender, RoutedEventArgs e)
         {
-            ClearError(); // Prevents stale errors from previous attempts
+            UserMessage.Clear(ErrorText); // Prevents stale errors from previous attempts
 
             string username = UsernameBox.Text.Trim(); // Retrieve user input (from username and password boxes)
             string password = PasswordBox.Password;
 
             if (string.IsNullOrWhiteSpace(username)) // Check username for blank input
             {
-                ShowError("Please enter a username.");
+                UserMessage.Show(ErrorText, MessageKind.Warning, UserMessage.FieldIsRequired("username"));
                 UsernameBox.Focus(); // Focuses on the username box for user convenience
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(password)) // Check password for blank input
             {
-                ShowError("Please enter a password.");
+                UserMessage.Show(ErrorText, MessageKind.Warning, UserMessage.FieldIsRequired("password"));
                 PasswordBox.Focus(); // Focuses on the password box for user convenience
                 return;
             }
@@ -55,30 +55,18 @@ namespace LibraryQA.Views
             catch (SqliteException ex)
             {
                 Debug.WriteLine($"Login failed - database error: {ex.Message}");
-                ShowError("Could not reach the library database. Please try again.");
+                UserMessage.Show(ErrorText, MessageKind.Error, UserMessage.DatabaseUnavailable);
                 return;
             }
 
             if (role == null)
             {
-                ShowError("Invalid username or password.");
+                UserMessage.Show(ErrorText, MessageKind.Error, UserMessage.InvalidCredentials);
                 PasswordBox.Clear(); // Remove invalid input from password box for user convenience
                 return;
             }
 
             LoginSucceeded?.Invoke(this, role.Value);
-        }
-
-        private void ShowError(string message) // Display error for user feedback
-        {
-            ErrorText.Text = $"⚠ {message}";
-            ErrorText.Visibility = Visibility.Visible;
-        }
-
-        private void ClearError() // Prevent stale errors by 'cleaning the slate'
-        {
-            ErrorText.Text = string.Empty;
-            ErrorText.Visibility = Visibility.Collapsed;
         }
 
     }

@@ -128,7 +128,7 @@ itself is correct and tested; only reservation closure is outstanding.
 |---|---|
 | **Title** | Error presentation is inconsistent across the three interfaces |
 | **Severity** | Low |
-| **Status** | Open |
+| **Status** | In Progress |
 | **Found by** | Summer |
 | **Found in** | `LoginView`, `MemberView`, `StaffView` |
 | **Related** | REQ-10 (Usability), REQ-12 (Reliability) |
@@ -148,8 +148,11 @@ independently. The result is inconsistent, but not incorrect.
 
 **Fix:**
 
-Delayed, to do next. The next phase will agree a single convention and
-document it, to keep things consistent across the application.
+Potentially: LibraryQA/Views/UserMessage.cs is now the single place where user-facing messages are worded and formatted (REQ-13). Severity is carried by a symbol as well as a colour, so meaning does not depend on colour alone.
+
+Applied to the Login and Member views. The Member view's blocking MessageBox dialogs were replaced with an inline status line, matching the other two screens.
+
+Outstanding: the Staff view, scheduled for Week 10 alongside its other changes (DEF-07, DEF-08, DEF-10). Splitting it this way avoided two people editing StaffView.cs in the same week.
 
 ---
 
@@ -159,7 +162,7 @@ document it, to keep things consistent across the application.
 |---|---|
 | **Title** | Partially entered sample data |
 | **Severity** | Medium |
-| **Status** | Open |
+| **Status** | Resolved |
 | **Found by** | Summer |
 | **Found in** | `Database` |
 | **Related** | REQ-14 (Integrity) |
@@ -177,8 +180,11 @@ Likely an AI generation error on initial development that was overlooked.
 
 **Fix:**
 
-Delayed, to do next. This is a simple fix, but the whole database should go under review
-to ensure that no other sample data has been effected in the same.
+Two mismatches were found and corrected in SampleData.sql. 'Gone Girl' (BookID 11) was marked 'Reserved' with no reservation row, and 'Becoming' (BookID 24) was marked 'On Loan' with no active loan row. Both are now 'Available', which matches their records.
+
+Reviewing the whole file also showed the loan dates were hardcoded to 2024, so every active loan read as years overdue and the file's own comments ("one overdue", "one active") no longer described the data. All loan and reservation dates are now relative to the current local date, so the seed always means what it says.
+
+TC-35 asserts that no book status disagrees with its loan and reservation records, so this cannot silently return.
 
 ---
 
@@ -269,7 +275,7 @@ Remove the redundant status-update calls since CreateLoan and processReturn alre
 |---|---|
 | **Title** | Overdue checks use UTC, so loans can be flagged a day late; days overdue differs between member + staff views. |
 | **Severity** | High |
-| **Status** | Open |
+| **Status** | Resolved |
 | **Found by** | Summer |
 | **Found in** | `DatabaseHelper.GetActiveLoans` / `DatabaseHelper.GetAllOverdueLoans` (SQL `julianday('now')`) + `MemberView` / `StaffView` (C# local-time calculations) |
 | **Related** | REQ-2b (Return), REQ-12 (Reliability) |
@@ -286,7 +292,11 @@ As these two parts were developed by two different people, they were not aware o
 
 **Fix:**
 
-Decide on one time reference across the whole app so there is no confusion between the two.
+Two separate faults were behind this. SQLite's date('now') returns the UTC date, which in New Zealand is up to a day behind local time, so a loan could stay unflagged for most of the day it fell due. Separately, the member view rounded a fractional day count while the staff view truncated it, so the two screens could differ by a day on the same loan.
+
+The rule now lives in one place, LibraryQA.Core/Services/OverdueRules.cs, and both screens call it (REQ-13). GetActiveLoans, GetAllOverdueLoans and GetStaffStatistics take the current date from the caller rather than reading it inside SQL, defaulting to the local date.
+
+Covered by TC-30 to TC-34, including the two boundary cases: a loan due today is not overdue, and a loan due yesterday is overdue by exactly one day.
 
 ---
 
@@ -322,7 +332,7 @@ Add a UI control on the staff return screen for selecting the condition of the b
 |---|---|
 | **Title** | Member + Staff views don't catch database errors, so the app could crash. |
 | **Severity** | Medium	|
-| **Status** | Open |
+| **Status** | In Progress |
 | **Found by** | Summer |
 | **Found in** | `MemberView` (`BorrowButton_Click`, `ReserveButton_Click`, `Load*` methods) + `StaffView` (`IssueButton_Click`, `ReturnButton_Click`, `LoadOverdueItems`) |
 | **Related** | REQ-12 (Reliability) |
@@ -338,7 +348,9 @@ An error handle was not implemented at the time of the development.
 
 **Fix:**
 
-Wrap the database call sites in both views with try/catch blocks for the SQliteException and display a message to the user that the database is not available/not loading.
+Every database call site in the Member view is now wrapped, and a failure shows UserMessage.DatabaseUnavailable rather than closing the application. The Login view already handled this and now uses the shared message.
+
+Outstanding: the Staff view, Week 10.
 
 ---
 
@@ -348,7 +360,7 @@ Wrap the database call sites in both views with try/catch blocks for the SQliteE
 |---|---|
 | **Title** |  Validation messages don't say which field is wrong. |
 | **Severity** | Low |
-| **Status** | Open |
+| **Status** | In Progress |
 | **Found by** | Summer |
 | **Found in** | `MemberActionsService.ReserveBook` (Member view Reserve form) + `StaffView.IssueButton_Click` (Staff Issue Loan form) |
 | **Related** | REQ-10 (Usability) |
@@ -364,7 +376,11 @@ As this is not a functional issue, the developer at the time did not realise tha
 
 **Fix:**
 
-Replace the Invalid input message with a more descriptive message that explains which field was wrongly inputted.
+Standard wordings now live in UserMessage: FieldIsRequired, FieldMustBeANumber and NothingSelected. The Login view names the field at fault ("Please enter a username") instead of describing the whole form.
+
+One message is deliberately excluded. UserMessage.InvalidCredentials stays vague about whether the username or the password was wrong, so the login screen cannot be used to confirm that an account exists (REQ-11). Validation errors name the field; authentication failures do not.
+
+Outstanding: the Staff view's Issue Loan form, Week 10.
 
 ---
 
@@ -428,7 +444,7 @@ Escape % and _ in searchTerm before wrapping it. and add an ESCAPE clause to eac
 |---|---|
 | **Title** | If sample data fails to load once, the app never retries – the catalogue stays empty. |
 | **Severity** | Low |
-| **Status** | Open |
+| **Status** | Resolved |
 | **Found by** | Summer |
 | **Found in** | `App.xaml.cs` / `DatabaseInitializer.DatabaseExists()` |
 | **Related** | REQ-12 (Reliability), REQ-14 (Integrity) |
@@ -446,7 +462,11 @@ This is a silent failure that is not reported.
 
 **Fix:**
 
-Change DatabaseExists() to check the books table actually has rows and not just that the table exists.
+DatabaseSeeder.HasSampleData() was added, and App.xaml.cs now checks seeding separately from schema creation. A database with tables but no rows is seeded again on the next launch instead of being treated as ready.
+
+This differs from the fix originally proposed here. Changing DatabaseExists() to check the Books table would conflate two different questions: whether the schema exists, and whether it holds data. Once staff catalogue management (REQ-1) ships, a librarian could legitimately empty the Books table, and the app would then re-seed over their work. HasSampleData() checks Accounts instead, which the application never deletes, so an empty Accounts table can only mean the seed did not complete.
+
+Covered by TC-36.
 
 ---
 
@@ -533,10 +553,25 @@ Wrapping the Assert messages in Setup() methods to check the return value of Dat
 
 ## Summary
 
-| ID | Title | Severity | Status |
-|---|---|---|---|
-| DEF-01 | Database stored password hashes do not match the actual documented passwords | High | Fixed |
-| DEF-02 | Book status not restored when a loan is returned | High | Resolved |
-| DEF-03 | Reservation not marked fulfilled when reserved item is returned | Medium | Open |
-| DEF-04 | Error presentation is inconsistent across the three interfaces | Low | Open |
-| DEF-05 | Partially entered sample data | Medium | Open |
+## Summary
+
+| ID | Title | Severity | Priority | Status |
+|---|---|---|---|---|
+| DEF-01 | Database stored password hashes do not match the documented passwords | High | P1 | Resolved |
+| DEF-02 | Book status not restored when a loan is returned | High | P1 | Resolved |
+| DEF-03 | Reservation not marked fulfilled when the reserved item is returned | Critical | P1 | Open |
+| DEF-04 | Error presentation is inconsistent across the three interfaces | Low | P1 | In Progress |
+| DEF-05 | Partially entered sample data | Medium | P2 | Resolved |
+| DEF-06 | Reserving a book sets it to "Reserved" while still on loan | High | P1 | Open |
+| DEF-07 | Staff Issue Loan skips the 2-book limit and the member ID check | High | P1 | Open |
+| DEF-08 | Book status is updated twice on borrow and return | Low | P2 | Open |
+| DEF-09 | Overdue checks use UTC; day counts differ between views | High | P1 | Resolved |
+| DEF-10 | Return condition is never recorded | Medium | P2 | Open |
+| DEF-11 | Member and Staff views do not catch database errors | Medium | P1 | In Progress |
+| DEF-12 | Validation messages do not say which field is wrong | Low | P2 | In Progress |
+| DEF-13 | A member can reserve a book they already have on loan | Low | P2 | Open |
+| DEF-14 | Searching for "%" or "_" matches every book | Low | P2 | Open |
+| DEF-15 | Sample data never retries after a failed load | Low | P2 | Resolved |
+| DEF-16 | TC-5 does not test the app; TC-4's name is wrong | Medium | P1 | Open |
+| DEF-17 | TC-6 and TC-7 check less than the RTM says they do | Medium | P1 | Open |
+| DEF-18 | Tests fail with a confusing error if the database cannot be created | Medium | P1 | Open |

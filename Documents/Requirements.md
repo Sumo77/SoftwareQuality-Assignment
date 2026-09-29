@@ -106,28 +106,4 @@ The system shall ‘lock’ (suspend) a login account after 5 consecutive failed
 - Given a locked account, when a correct username and password are entered, then access is still denied until the lock is cleared.
 - Given a successful login occurs before reaching the failed-attempt threshold, when the login succeeds, then the failed-attempt count resets to zero.
 
-## Matrix 
-| Req ID | Requirement | Type | Test Case(s) | Implementation Status |
-|--------|-------------|------|---------------|------------------------|
-| REQ-1 | Catalogue Management | Functional | — | Partial |
-| REQ-2a | Borrow | Functional | TC-8 | Implemented | 
-| REQ-2b | Return | Functional | TC-6 | Implemented | 
-| REQ-3 | Reservations | Functional | TC-9 | Implemented | 
-| REQ-4 | Overdue | Functional | — | Missing | 
-| REQ-5 | Member Portal | Functional | TC-1, TC-11 | Implemented | 
-| REQ-6 | Staff Portal | Functional | TC-2, TC-4 | Partial | 
-| REQ-7 | Access Control | Functional | TC-1, TC-2, TC-7 | Implemented |
-| REQ-8 | Loan Limits | Functional | TC-10 | Implemented | 
-| REQ-9 | Input Validation | Functional | TC-5 | Partial |
-| REQ-10 | Usability | Non-Functional | Usability walkthrough | Partial |
-| REQ-11 | Security | Non-Functional | TC-2, TC-3, TC-7 | Implemented | 
-| REQ-12 | Reliability | Non-Functional | TC-3 | Partial | 
-| REQ-13 | Maintainability | Non-Functional | Code review at merge | Partial |
-| REQ-14 | Integrity | Non-Functional | TC-8, TC-9 | Implemented | 
-| REQ-15 | Performance | Non-Functional | — | Missing | 
-| REQ-16 | Account Creation | Functional | — | Missing |
-| REQ-17 | Overdue Notices | Functional | — | Missing | 
-| REQ-18 | Loan and Reservation Approval | Functional | — | Missing |
-| REQ-19 | Member Suspension | Functional | — | Missing | 
-| REQ-20 | Reservation Expiry | Functional | — | Missing |
-| REQ-21 | Login Lockout | Non-Functional | — | Missing |
+The requirements traceability matrix is maintained in Traceability_Matrix.md.
