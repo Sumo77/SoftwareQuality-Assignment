@@ -110,9 +110,9 @@ namespace LibraryQA.Tests
                 var percentResults = db.SearchCatalogue("%");
                 var underscoreResults = db.SearchCatalogue("_");
 
-                Assert.IsTrue(percentResults.Count < totalBooks,
+                Assert.IsLessThan(totalBooks, percentResults.Count,
                     "Searching for a literal '%' should not match every book in the catalogue.");
-                Assert.IsTrue(underscoreResults.Count < totalBooks,
+                Assert.IsLessThan(totalBooks, underscoreResults.Count,
                     "Searching for a literal '_' should not match every book in the catalogue.");
             }
         }
