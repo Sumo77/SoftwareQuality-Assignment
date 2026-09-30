@@ -77,17 +77,27 @@
             </TabItem>
 
             <TabItem Header="Reservations">
-                <ListView x:Name="ReservationsListView" Margin="12">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="Title" Width="220" DisplayMemberBinding="{Binding Title}"/>
-                            <GridViewColumn Header="Book ID" Width="70" DisplayMemberBinding="{Binding BookId}"/>
-                            <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
-                            <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
-                            <GridViewColumn Header="Reserved On" Width="150" DisplayMemberBinding="{Binding ReservedOn}"/>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
+                <StackPanel Margin="12">
+                    <ListView x:Name="ReservationsListView" Height="260">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Reservation ID" Width="100" DisplayMemberBinding="{Binding ReservationId}"/>
+                                <GridViewColumn Header="Title" Width="200" DisplayMemberBinding="{Binding Title}"/>
+                                <GridViewColumn Header="Book ID" Width="70" DisplayMemberBinding="{Binding BookId}"/>
+                                <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
+                                <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
+                                <GridViewColumn Header="Reserved On" Width="120" DisplayMemberBinding="{Binding ReservedOn}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+
+                    <TextBlock Text="Reservation ID" Margin="0,12,0,4"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="ReservationIdBox" Width="150" Padding="6" Margin="0,0,8,0"/>
+                        <Button Content="Fulfil Reservation (Collected)" Padding="8,4" Click="FulfilButton_Click"/>
+                    </StackPanel>
+                    <TextBlock x:Name="ReservationStatusText" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
             </TabItem>
 
             <TabItem Header="Members">

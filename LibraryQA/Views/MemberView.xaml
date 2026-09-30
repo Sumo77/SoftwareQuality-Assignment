@@ -15,6 +15,10 @@
 			</Grid>
 		</Border>
 
+		<!-- DEF-04: shared inline status line, replacing the blocking MessageBox dialogs.
+			Formatting is handled by UserMessage so it matches the other views. -->
+		<TextBlock x:Name="StatusText" DockPanel.Dock="Bottom" TextWrapping="Wrap" Margin="12,0,12,12" Visibility="Collapsed"/>
+
 		<TabControl Margin="12">
 			<TabItem Header="Catalogue Search">
 				<StackPanel Margin="12">

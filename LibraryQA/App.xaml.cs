@@ -10,7 +10,7 @@ namespace LibraryQA
     /// Interaction logic for App.xaml
     public partial class App : Application
     {
-        
+
         /// Full path to the SQLite database file, in the application's output folder.
         public static string DatabasePath { get; } = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "library.db");
@@ -22,7 +22,6 @@ namespace LibraryQA
         protected override void OnStartup(StartupEventArgs e)
         {
             // Create and seed the database before the main window opens.
-            // Runs once - on later launches the existing library.db is reused.
             var initializer = new DatabaseInitializer(DatabasePath);
 
             if (!initializer.DatabaseExists())
@@ -35,16 +34,21 @@ namespace LibraryQA
                     Shutdown();
                     return;
                 }
+            }
 
-                var seeder = new DatabaseSeeder(DatabasePath);
+            // DEF-15: seeding is checked separately from schema creation.
+            // Previously, if the schema was created but seeding failed, the database file existed
+            // on the next launch, DatabaseExists() returned true, and the app never tried to seed
+            // again - leaving an empty catalogue permanently. Now the seed runs whenever the
+            // database holds no accounts, so a failed seed is retried on the next launch.
+            var seeder = new DatabaseSeeder(DatabasePath);
 
-                if (!seeder.SeedSampleData())
-                {
-                    MessageBox.Show(
-                        "The database was created but the sample data could not be loaded. " +
-                        "The catalogue will be empty.",
-                        "Startup warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
+            if (!seeder.HasSampleData() && !seeder.SeedSampleData())
+            {
+                MessageBox.Show(
+                    "The sample data could not be loaded, so the catalogue will be empty. " +
+                    "Closing and reopening the application will try again.",
+                    "Startup warning", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
 
             base.OnStartup(e);

@@ -129,7 +129,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        
+
         // Gets the connection string for the configured database.
         public string ConnectionString => _connectionString;
 

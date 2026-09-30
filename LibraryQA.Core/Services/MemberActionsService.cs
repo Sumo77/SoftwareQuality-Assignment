@@ -1,6 +1,6 @@
-﻿using LibraryQA.Core.Database;
+using LibraryQA.Core.Database;
 using System;
-using System.Net.NetworkInformation;
+using System.Linq;
 
 namespace LibraryQA.Core.Services
 {
@@ -102,6 +102,14 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult { Success = false, Message = "Apologies, this book is already reserved - Please check back and try again at a later date." };
                 }
 
+                bool alreadyOnLoanToThisMember = db.GetActiveLoans(memberId) // Check if the member already has this exact book on loan
+                    .Any(loan => Convert.ToInt32(loan["BookID"]) == bookId);
+
+                if (alreadyOnLoanToThisMember)
+                {
+                    return new ReserveResult { Success = false, Message = "You already have this book on loan." };
+                }
+
                 int? reservationId = db.CreateReservation(bookId, memberId, DateTime.Today); // Create reservation
 
                 if (reservationId == null) // Check if reservation was successful
@@ -113,7 +121,13 @@ namespace LibraryQA.Core.Services
                     };
                 }
 
-                db.UpdateBookStatus(bookId, "Reserved"); // Update book status to properly reflect new status, return result
+                // Only promote the catalogue status to Reserved if the book isn't currently On Loan -
+                // it must stay On Loan until the current borrower returns it. ProcessReturn is
+                // responsible for transitioning the status to Reserved once the loan is closed.
+                if (book["Status"].ToString() != "On Loan")
+                {
+                    db.UpdateBookStatus(bookId, "Reserved");
+                }
 
                 return new ReserveResult { Success = true, Message = "Reserved successfully." };
             }

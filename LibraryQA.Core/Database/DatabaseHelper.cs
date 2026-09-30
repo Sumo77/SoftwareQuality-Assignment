@@ -1,7 +1,9 @@
+using LibraryQA.Core.Services;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Globalization;
 
 namespace LibraryQA.Core.Database
 {
@@ -250,15 +252,22 @@ namespace LibraryQA.Core.Database
 
             using (var command = _connection!.CreateCommand())
             {
+                // Escape LIKE wildcard characters in the user's search term so that a literal
+                // "%" or "_" is matched literally, rather than being treated as a wildcard.
+                string escapedSearchTerm = searchTerm
+                    .Replace("\\", "\\\\")
+                    .Replace("%", "\\%")
+                    .Replace("_", "\\_");
+
                 command.CommandText = @"
                     SELECT BookID, ISBN, Title, Author, Publisher, PublicationYear, Genre, Status, Description
                     FROM Books 
-                    WHERE Title LIKE @searchTerm 
-                       OR Author LIKE @searchTerm 
-                       OR ISBN LIKE @searchTerm
+                    WHERE Title LIKE @searchTerm ESCAPE '\'
+                       OR Author LIKE @searchTerm ESCAPE '\'
+                       OR ISBN LIKE @searchTerm ESCAPE '\'
                     ORDER BY Title";
 
-                command.Parameters.AddWithValue("@searchTerm", $"%{searchTerm}%");
+                command.Parameters.AddWithValue("@searchTerm", $"%{escapedSearchTerm}%");
 
                 using (var reader = command.ExecuteReader())
                 {
@@ -396,17 +405,20 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public List<Dictionary<string, object>> GetActiveLoans(int memberId) // Gets all active loans for a specific member, including overdue status and days overdue
+        // DEF-09: the caller supplies today's local date. SQLite's date('now') is UTC, which in
+        // New Zealand is up to a day behind, so loans could stay unflagged on the day they fell due.
+        // Overdue status and the day count both come from OverdueRules, so the member and staff
+        // views can never disagree (REQ-4, REQ-13).
+        public List<Dictionary<string, object>> GetActiveLoans(int memberId, DateTime? today = null) // Gets all active loans for a specific member, including overdue status and days overdue
         {
             OpenConnection();
+            DateTime asAt = (today ?? DateTime.Today).Date;
             var results = new List<Dictionary<string, object>>();
 
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT L.LoanID, L.BookID, B.Title, B.Author, L.LoanDate, L.DueDate,
-                           CASE WHEN date('now') > date(L.DueDate) THEN 1 ELSE 0 END as IsOverdue,
-                           julianday('now') - julianday(L.DueDate) as DaysOverdue
+                    SELECT L.LoanID, L.BookID, B.Title, B.Author, L.LoanDate, L.DueDate
                     FROM Loans L
                     JOIN Books B ON L.BookID = B.BookID
                     WHERE L.MemberID = @memberId AND L.ReturnDate IS NULL
@@ -418,6 +430,8 @@ namespace LibraryQA.Core.Database
                 {
                     while (reader.Read())
                     {
+                        DateTime dueDate = ReadDate(reader["DueDate"]);
+
                         results.Add(new Dictionary<string, object>
                         {
                             ["LoanID"] = reader["LoanID"],
@@ -426,8 +440,8 @@ namespace LibraryQA.Core.Database
                             ["Author"] = reader["Author"],
                             ["LoanDate"] = reader["LoanDate"],
                             ["DueDate"] = reader["DueDate"],
-                            ["IsOverdue"] = Convert.ToInt32(reader["IsOverdue"]) == 1,
-                            ["DaysOverdue"] = Math.Max(0, Convert.ToInt32(reader["DaysOverdue"]))
+                            ["IsOverdue"] = OverdueRules.IsOverdue(dueDate, asAt),
+                            ["DaysOverdue"] = OverdueRules.DaysOverdue(dueDate, asAt)
                         });
                     }
                 }
@@ -637,9 +651,11 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public List<Dictionary<string, object>> GetAllOverdueLoans() // Retrieves all overdue loans, including member and book details, for staff reporting
+        // DEF-09: same local-date rule as GetActiveLoans, and the same day count via OverdueRules.
+        public List<Dictionary<string, object>> GetAllOverdueLoans(DateTime? today = null) // Retrieves all overdue loans, including member and book details, for staff reporting
         {
             OpenConnection();
+            DateTime asAt = (today ?? DateTime.Today).Date;
             var results = new List<Dictionary<string, object>>();
 
             using (var command = _connection!.CreateCommand())
@@ -647,18 +663,21 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT L.LoanID, L.BookID, B.Title, B.Author, 
                            L.MemberID, A.FirstName, A.LastName, A.Email,
-                           L.LoanDate, L.DueDate,
-                           CAST(julianday('now') - julianday(L.DueDate) AS INTEGER) as DaysOverdue
+                           L.LoanDate, L.DueDate
                     FROM Loans L
                     JOIN Books B ON L.BookID = B.BookID
                     JOIN Accounts A ON L.MemberID = A.AccountID
-                    WHERE L.ReturnDate IS NULL AND date('now') > date(L.DueDate)
+                    WHERE L.ReturnDate IS NULL AND date(@today) > date(L.DueDate)
                     ORDER BY L.DueDate";
+
+                command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
 
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
+                        DateTime dueDate = ReadDate(reader["DueDate"]);
+
                         results.Add(new Dictionary<string, object>
                         {
                             ["LoanID"] = reader["LoanID"],
@@ -672,7 +691,7 @@ namespace LibraryQA.Core.Database
                             ["Email"] = reader["Email"] ?? "",
                             ["LoanDate"] = reader["LoanDate"],
                             ["DueDate"] = reader["DueDate"],
-                            ["DaysOverdue"] = reader["DaysOverdue"]
+                            ["DaysOverdue"] = OverdueRules.DaysOverdue(dueDate, asAt)
                         });
                     }
                 }
@@ -856,25 +875,127 @@ namespace LibraryQA.Core.Database
             }
         }
 
+        public int? FulfillReservation(int reservationId, DateTime collectionDate, int loanPeriodDays) // Marks a reservation as fulfilled when the reserving member collects the held book, and issues the loan for it
+        {
+            OpenConnection();
+
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                int bookId;
+                int memberId;
+                using (var lookupCommand = _connection.CreateCommand())
+                {
+                    lookupCommand.Transaction = transaction;
+                    lookupCommand.CommandText = @"
+                        SELECT BookID, MemberID FROM Reservations
+                        WHERE ReservationID = @reservationId AND FulfilledDate IS NULL";
+                    lookupCommand.Parameters.AddWithValue("@reservationId", reservationId);
+
+                    using (var reader = lookupCommand.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            transaction.Rollback();
+                            return null;
+                        }
+
+                        bookId = Convert.ToInt32(reader["BookID"]);
+                        memberId = Convert.ToInt32(reader["MemberID"]);
+                    }
+                }
+
+                // Only collectable if the book has actually been returned and held for this reservation
+                using (var statusCommand = _connection.CreateCommand())
+                {
+                    statusCommand.Transaction = transaction;
+                    statusCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
+                    statusCommand.Parameters.AddWithValue("@bookId", bookId);
+
+                    var status = statusCommand.ExecuteScalar()?.ToString();
+                    if (status != "Reserved")
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+                }
+
+                using (var fulfillCommand = _connection.CreateCommand())
+                {
+                    fulfillCommand.Transaction = transaction;
+                    fulfillCommand.CommandText = @"
+                        UPDATE Reservations
+                        SET FulfilledDate = @fulfilledDate
+                        WHERE ReservationID = @reservationId AND FulfilledDate IS NULL";
+                    fulfillCommand.Parameters.AddWithValue("@fulfilledDate", collectionDate.ToString("yyyy-MM-dd"));
+                    fulfillCommand.Parameters.AddWithValue("@reservationId", reservationId);
+
+                    if (fulfillCommand.ExecuteNonQuery() == 0)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+                }
+
+                int? loanId;
+                using (var loanCommand = _connection.CreateCommand())
+                {
+                    loanCommand.Transaction = transaction;
+                    loanCommand.CommandText = @"
+                        INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate)
+                        VALUES (@bookId, @memberId, @loanDate, @dueDate);
+                        SELECT last_insert_rowid();";
+
+                    loanCommand.Parameters.AddWithValue("@bookId", bookId);
+                    loanCommand.Parameters.AddWithValue("@memberId", memberId);
+                    loanCommand.Parameters.AddWithValue("@loanDate", collectionDate.ToString("yyyy-MM-dd"));
+                    loanCommand.Parameters.AddWithValue("@dueDate", collectionDate.AddDays(loanPeriodDays).ToString("yyyy-MM-dd"));
+
+                    var result = loanCommand.ExecuteScalar();
+                    loanId = result != null ? Convert.ToInt32(result) : (int?)null;
+                }
+
+                if (loanId == null)
+                {
+                    transaction.Rollback();
+                    return null;
+                }
+
+                using (var updateBookCommand = _connection.CreateCommand())
+                {
+                    updateBookCommand.Transaction = transaction;
+                    updateBookCommand.CommandText = "UPDATE Books SET Status = 'On Loan' WHERE BookID = @bookId";
+                    updateBookCommand.Parameters.AddWithValue("@bookId", bookId);
+                    updateBookCommand.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+                return loanId;
+            }
+        }
+
         #endregion
 
         #region Staff Reporting Operations
 
 
         /// Gets statistics for staff dashboard/reporting.
-        public Dictionary<string, int> GetStaffStatistics()
+        public Dictionary<string, int> GetStaffStatistics(DateTime? today = null)
         {
             OpenConnection();
+            DateTime asAt = (today ?? DateTime.Today).Date;
             var stats = new Dictionary<string, int>();
 
             using (var command = _connection!.CreateCommand())
             {
+                // DEF-09: the overdue count uses the same local date as the loan lists.
+                command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
                 // Total items on loan
                 command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL";
                 stats["TotalOnLoan"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Overdue items
-                command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND date('now') > date(DueDate)";
+                command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND date(@today) > date(DueDate)";
                 stats["TotalOverdue"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Active reservations
@@ -936,6 +1057,13 @@ namespace LibraryQA.Core.Database
         }
 
         #endregion
+
+        // Dates are stored as yyyy-MM-dd text, so they are parsed with the invariant culture
+        // rather than whatever the machine is set to.
+        private static DateTime ReadDate(object value)
+        {
+            return DateTime.Parse(value.ToString()!, CultureInfo.InvariantCulture);
+        }
 
         #region IDisposable Implementation
 
