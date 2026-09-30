@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
-             d:DesignHeight="500" d:DesignWidth="700"
+             d:DesignHeight="550" d:DesignWidth="750"
              Loaded="StaffView_Loaded">
     <DockPanel>
         <Border DockPanel.Dock="Top" Background="#9F4E2E" Padding="12">
@@ -19,20 +19,43 @@
         <TabControl Margin="12">
             <TabItem Header="Issue / Return">
                 <StackPanel Margin="12">
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                        <TextBlock Text="Member ID" Width="150"/>
-                        <TextBlock Text="Book ID (Issue)" Width="150"/>
-                        <TextBlock Text="Loan ID (Return)" Width="150"/>
+                    <TextBlock Text="Issue a Loan" FontWeight="Bold" Margin="0,0,0,4"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="Member"/>
+                            <ComboBox x:Name="MemberComboBox" Width="220" Padding="6"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="Book (Available only)"/>
+                            <ComboBox x:Name="BookComboBox" Width="280" Padding="6"/>
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Bottom">
+                            <Button Content="Issue Loan" Padding="8,6" Click="IssueButton_Click"/>
+                        </StackPanel>
                     </StackPanel>
+
+                    <Separator Margin="0,0,0,16"/>
+
+                    <TextBlock Text="Process a Return" FontWeight="Bold" Margin="0,0,0,4"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBox x:Name="MemberIdBox" Width="150" Padding="6" Margin="0,0,0,4"/>
-                        <TextBox x:Name="BookIdBox" Width="150" Padding="6" Margin="0,0,0,4"/>
-                        <TextBox x:Name="LoanIdBox" Width="150" Padding="6" Margin="0,0,0,4"/>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="Active Loan"/>
+                            <ComboBox x:Name="LoanComboBox" Width="320" Padding="6"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,12,0">
+                            <TextBlock Text="Condition"/>
+                            <ComboBox x:Name="ConditionComboBox" Width="140" Padding="6" SelectedIndex="0">
+                                <ComboBoxItem Content="Good"/>
+                                <ComboBoxItem Content="Fair"/>
+                                <ComboBoxItem Content="Damaged"/>
+                                <ComboBoxItem Content="Lost"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Bottom">
+                            <Button Content="Process Return" Padding="8,6" Click="ReturnButton_Click"/>
+                        </StackPanel>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Button Content="Issue Loan" Padding="8,4" Margin="0,0,8,0" Click="IssueButton_Click"/>
-                        <Button Content="Process Return" Padding="8,4" Click="ReturnButton_Click"/>
-                    </StackPanel>
+
                     <TextBlock x:Name="IssueReturnStatusText" Margin="0,12,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </TabItem>
@@ -67,12 +90,35 @@
                 </ListView>
             </TabItem>
 
+            <TabItem Header="Members">
+                <StackPanel Margin="12">
+                    <ListView x:Name="MembersListView" Height="320">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding AccountId}"/>
+                                <GridViewColumn Header="Name" Width="180" DisplayMemberBinding="{Binding FullName}"/>
+                                <GridViewColumn Header="Username" Width="150" DisplayMemberBinding="{Binding Username}"/>
+                                <GridViewColumn Header="Status" Width="100" DisplayMemberBinding="{Binding Status}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Suspend Selected" Padding="8,4" Margin="0,0,8,0" Click="SuspendButton_Click"/>
+                        <Button Content="Reactivate Selected" Padding="8,4" Click="ReactivateButton_Click"/>
+                    </StackPanel>
+                    <TextBlock x:Name="MemberActionStatusText" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </TabItem>
+
             <TabItem Header="Report Summary">
                 <StackPanel Margin="12">
                     <TextBlock Text="Summary Statistics" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
                     <TextBlock x:Name="TotalOnLoanText" Text="Items currently on loan: -"/>
                     <TextBlock x:Name="TotalOverdueText" Text="Items overdue: -" Margin="0,4,0,0"/>
                     <TextBlock x:Name="TotalReservationsText" Text="Active reservations: -" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="TotalMembersText" Text="Total members: -" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="TotalBooksText" Text="Total books: -" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="AvailableBooksText" Text="Available books: -" Margin="0,4,0,0"/>
 
                     <TextBlock Text="Most Borrowed Titles" FontWeight="Bold" FontSize="14" Margin="0,16,0,8"/>
                     <ListView x:Name="MostBorrowedListView" Height="180">

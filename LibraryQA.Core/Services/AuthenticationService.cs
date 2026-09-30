@@ -10,6 +10,7 @@ namespace LibraryQA.Core.Services
     public class AuthenticationService
     {
         private const string StaffRole = "Staff";
+        private const string SuspendedStatus = "Suspended";
 
         private readonly string _connectionString;
 
@@ -19,7 +20,7 @@ namespace LibraryQA.Core.Services
                 ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        public UserRole? Authenticate(string username, string password) // Returns the account's role, or null if credentials are rejected.
+        public UserRole? Authenticate(string username, string password) // Returns the account's role, or null if credentials are rejected or the account is suspended.
         {
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
                 return null;
@@ -31,10 +32,31 @@ namespace LibraryQA.Core.Services
                 if (accountId == null)
                     return null;
 
+                string? status = db.GetAccountStatus(accountId.Value);
+                if (string.Equals(status, SuspendedStatus, StringComparison.OrdinalIgnoreCase))
+                    return null;
+
                 string? role = db.GetAccountRole(accountId.Value);
 
                 // Fails closed: only an exact 'Staff' match grants staff access.
                 return role == StaffRole ? UserRole.Staff : UserRole.Member;
+            }
+        }
+
+        public bool IsAccountSuspended(string username) // REQ-19: checked by LoginView, independent of password, so a suspended account is flagged even on a correct-password attempt
+        {
+            if (string.IsNullOrWhiteSpace(username))
+                return false;
+
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                int? accountId = db.GetAccountIdByUsername(username.Trim());
+
+                if (accountId == null)
+                    return false; // unknown username - let the normal invalid-credentials flow handle it
+
+                string? status = db.GetAccountStatus(accountId.Value);
+                return string.Equals(status, SuspendedStatus, StringComparison.OrdinalIgnoreCase);
             }
         }
 
