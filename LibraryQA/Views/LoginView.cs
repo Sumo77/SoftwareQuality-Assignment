@@ -47,7 +47,7 @@ namespace LibraryQA.Views
             }
             if (_authService.IsAccountSuspended(username))
             {
-                ShowError("This account has been suspended. Please contact library staff.");
+                UserMessage.Show(ErrorText, MessageKind.Error, "This account has been suspended. Please contact library staff.");
                 PasswordBox.Clear();
                 return;
             }
