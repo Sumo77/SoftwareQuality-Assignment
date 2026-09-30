@@ -11,7 +11,9 @@ namespace LibraryQA.Views
     public partial class StaffView : UserControl
     {
         public event EventHandler? LogoutRequested;
-
+        
+        private const int LoanPeriodDays = 14;
+        
         public StaffView() // Initialise Staff View
         {
             InitializeComponent();
