@@ -287,6 +287,10 @@ namespace LibraryQA.Views
         {
             MemberActionStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
             MemberActionStatusText.Foreground = isError
+                ? System.Windows.Media.Brushes.Red
+                : System.Windows.Media.Brushes.Green;
+        }
+
         private void ShowReservationStatus(string message, bool isError) // Display a status message for reservation fulfilment, with different formatting for errors and success messages
         {
             ReservationStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
