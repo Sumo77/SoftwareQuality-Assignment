@@ -25,19 +25,24 @@ DROP TABLE IF EXISTS Accounts;
 -- Stores both Member and Staff accounts with unified structure
 -- Role field determines access level (REQ-7, REQ-11)
 -- Passwords stored as hashed values (basic security)
+-- AccountStatus / FailedLoginAttempts support REQ-16 (Account Creation),
+-- REQ-19 (Member Suspension), and REQ-21 (Login Lockout)
 -- ============================================================================
 CREATE TABLE Accounts (
-	AccountID       INTEGER PRIMARY KEY AUTOINCREMENT,
-	Username        TEXT NOT NULL UNIQUE,
-	PasswordHash    TEXT NOT NULL,
-	Role            TEXT NOT NULL CHECK(Role IN ('Member', 'Staff')),
-	FirstName       TEXT NOT NULL,
-	LastName        TEXT NOT NULL,
-	Email           TEXT,
-	PhoneNumber     TEXT,
-	CreatedDate     TEXT NOT NULL DEFAULT (datetime('now')),
-	IsActive        INTEGER NOT NULL DEFAULT 1 CHECK(IsActive IN (0, 1))
+	AccountID           INTEGER PRIMARY KEY AUTOINCREMENT,
+	Username            TEXT NOT NULL UNIQUE,
+	PasswordHash        TEXT NOT NULL,
+	Role                TEXT NOT NULL CHECK(Role IN ('Member', 'Staff')),
+	FirstName           TEXT NOT NULL,
+	LastName            TEXT NOT NULL,
+	Email               TEXT,
+	PhoneNumber         TEXT,
+	CreatedDate         TEXT NOT NULL DEFAULT (datetime('now')),
+	IsActive            INTEGER NOT NULL DEFAULT 1 CHECK(IsActive IN (0, 1)),
+	AccountStatus       TEXT NOT NULL DEFAULT 'Active' CHECK(AccountStatus IN ('Active', 'Suspended')),
+	FailedLoginAttempts INTEGER NOT NULL DEFAULT 0
 );
+
 
 -- Index for fast login lookups
 CREATE INDEX idx_accounts_username ON Accounts(Username);

@@ -101,6 +101,78 @@ namespace LibraryQA.Core.Database
             }
         }
 
+        public string? GetAccountStatus(int accountId) // Retrieves the current AccountStatus ("Active" or "Suspended") for REQ-19/REQ-21
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "SELECT AccountStatus FROM Accounts WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@accountId", accountId);
+
+                var result = command.ExecuteScalar();
+                return result?.ToString();
+            }
+        }
+
+        public bool SetAccountStatus(int accountId, string status) // Sets an account's status to Active or Suspended (REQ-19: staff suspend/reactivate)
+        {
+            if (status != "Active" && status != "Suspended")
+            {
+                throw new ArgumentException("Invalid status. Must be 'Active' or 'Suspended'.");
+            }
+
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "UPDATE Accounts SET AccountStatus = @status WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@status", status);
+                command.Parameters.AddWithValue("@accountId", accountId);
+
+                int rowsAffected = command.ExecuteNonQuery();
+                return rowsAffected > 0;
+            }
+        }
+
+        public int GetFailedLoginAttempts(int accountId) // Groundwork for REQ-21 (Login Lockout) - reads the current failed-attempt count
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "SELECT FailedLoginAttempts FROM Accounts WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@accountId", accountId);
+
+                var result = command.ExecuteScalar();
+                return result != null ? Convert.ToInt32(result) : 0;
+            }
+        }
+
+        public void IncrementFailedLoginAttempts(int accountId) // Groundwork for REQ-21 - call after a failed login attempt
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "UPDATE Accounts SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@accountId", accountId);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void ResetFailedLoginAttempts(int accountId) // Groundwork for REQ-21 - call after a successful login
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "UPDATE Accounts SET FailedLoginAttempts = 0 WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@accountId", accountId);
+                command.ExecuteNonQuery();
+            }
+        }
+
         public Dictionary<string, object>? GetAccountInfo(int accountId) // Retrieves full account information for a given account ID
         {
             OpenConnection();
@@ -108,7 +180,7 @@ namespace LibraryQA.Core.Database
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT AccountID, Username, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate
+                    SELECT AccountID, Username, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate, AccountStatus
                     FROM Accounts 
                     WHERE AccountID = @accountId AND IsActive = 1";
 
@@ -127,13 +199,46 @@ namespace LibraryQA.Core.Database
                             ["LastName"] = reader["LastName"],
                             ["Email"] = reader["Email"] ?? "",
                             ["PhoneNumber"] = reader["PhoneNumber"] ?? "",
-                            ["CreatedDate"] = reader["CreatedDate"]
+                            ["CreatedDate"] = reader["CreatedDate"],
+                            ["AccountStatus"] = reader["AccountStatus"]
                         };
                     }
                 }
             }
 
             return null;
+        }
+
+        public List<Dictionary<string, object>> GetAllMembers() // Gets all member accounts (any status), for staff selection lists and member management (REQ-19, "pick from a list" improvement)
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT AccountID, Username, FirstName, LastName, AccountStatus
+                    FROM Accounts
+                    WHERE Role = 'Member' AND IsActive = 1
+                    ORDER BY LastName, FirstName";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["AccountID"] = reader["AccountID"],
+                            ["Username"] = reader["Username"],
+                            ["FirstName"] = reader["FirstName"],
+                            ["LastName"] = reader["LastName"],
+                            ["AccountStatus"] = reader["AccountStatus"]
+                        });
+                    }
+                }
+            }
+
+            return results;
         }
 
         #endregion
@@ -587,6 +692,41 @@ namespace LibraryQA.Core.Database
                             ["LoanDate"] = reader["LoanDate"],
                             ["DueDate"] = reader["DueDate"],
                             ["DaysOverdue"] = OverdueRules.DaysOverdue(dueDate, asAt)
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        public List<Dictionary<string, object>> GetAllActiveLoans() // Gets all currently active (unreturned) loans system-wide, for staff selection when processing a return (the "pick from a list" improvement)
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT L.LoanID, L.BookID, B.Title, L.MemberID, A.FirstName, A.LastName, L.DueDate
+                    FROM Loans L
+                    JOIN Books B ON L.BookID = B.BookID
+                    JOIN Accounts A ON L.MemberID = A.AccountID
+                    WHERE L.ReturnDate IS NULL
+                    ORDER BY L.DueDate";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["LoanID"] = reader["LoanID"],
+                            ["BookID"] = reader["BookID"],
+                            ["Title"] = reader["Title"],
+                            ["MemberID"] = reader["MemberID"],
+                            ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
+                            ["DueDate"] = reader["DueDate"]
                         });
                     }
                 }

@@ -1,6 +1,6 @@
-﻿using System;
-using System.Linq;
 using LibraryQA.Core.Database;
+using System;
+using System.Linq;
 
 namespace LibraryQA.Core.Services
 {
@@ -22,6 +22,22 @@ namespace LibraryQA.Core.Services
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
+                var account = db.GetAccountInfo(memberId);
+
+                if (account == null)
+                {
+                    return new BorrowResult { Success = false, Message = $"No member found with ID {memberId}." };
+                }
+
+                if (!string.Equals(account["Role"]?.ToString(), "Member", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new BorrowResult { Success = false, Message = $"Account {memberId} is not a Member account and cannot borrow items." };
+                }
+                if (string.Equals(account["AccountStatus"]?.ToString(), "Suspended", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new BorrowResult { Success = false, Message = $"Account {memberId} is suspended and cannot borrow items." };
+                }
+
                 var book = db.GetBookById(bookId);
 
                 if (book == null) // Check if book exists
@@ -42,16 +58,22 @@ namespace LibraryQA.Core.Services
                 DateTime loanDate = DateTime.Today;
                 DateTime dueDate = loanDate.AddDays(LoanPeriodDays);
 
-                int? loanId = db.CreateLoan(bookId, memberId, loanDate, dueDate); // Create book loan
+                int? loanId = db.CreateLoan(bookId, memberId, loanDate, dueDate); // Create book loan(also sets status to "On Loan" internally)
 
                 if (loanId == null) // Check book loan was successful
                 {
                     return new BorrowResult { Success = false, Message = "Unable to complete the loan. Please try again." };
                 }
 
-                db.UpdateBookStatus(bookId, "On Loan"); // Update book status to properly reflect new status, return result
+                return new BorrowResult
+                {
+                    Success = true,
+                    Message = "Borrowed " + book["Title"] + " successfully.",
+                    DueDate = dueDate,
+                    LoanId = loanId,
+                    BookTitle = book["Title"]?.ToString()
+                };
 
-                return new BorrowResult { Success = true, Message = "Borrowed " + book["Title"] + " successfully.", DueDate = dueDate };
             }
         }
 

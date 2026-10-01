@@ -45,6 +45,12 @@ namespace LibraryQA.Views
                 PasswordBox.Focus(); // Focuses on the password box for user convenience
                 return;
             }
+            if (_authService.IsAccountSuspended(username))
+            {
+                UserMessage.Show(ErrorText, MessageKind.Error, "This account has been suspended. Please contact library staff.");
+                PasswordBox.Clear();
+                return;
+            }
 
             UserRole? role;
 

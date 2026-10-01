@@ -7,6 +7,9 @@ namespace LibraryQA.Core.Services
         public bool Success { get; init; }
         public string Message { get; init; } = string.Empty;
         public DateTime? DueDate { get; init; }
+        public int? LoanId { get; init; }
+        public string? BookTitle { get; init; }
+
     }
 
     public class ReserveResult // Stored result of a book reservation operation

@@ -1,19 +1,18 @@
-﻿using System;
+﻿using LibraryQA.Core.Database;
+using LibraryQA.Core.Services;
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using LibraryQA.Core.Database;
 
 namespace LibraryQA.Views
 {
-    // Staff Interface, allowing staff to manage loans, returns, reservations, and view reporting data
+    // Staff Interface, allowing staff to manage loans, returns, reservations, members, and view reporting data
     public partial class StaffView : UserControl
     {
-        private const int LoanPeriodDays = 14;
-
         public event EventHandler? LogoutRequested;
-
-        public StaffView() // Initialise Member View
+        private const int LoanPeriodDays = 14;
+        public StaffView() // Initialise Staff View
         {
             InitializeComponent();
         }
@@ -25,8 +24,12 @@ namespace LibraryQA.Views
 
         private void RefreshAllData() // Refresh all data displayed in the staff interface
         {
+            LoadMemberPicker();
+            LoadBookPicker();
+            LoadLoanPicker();
             LoadOverdueItems();
             LoadReservations();
+            LoadMembersList();
             LoadReporting();
         }
 
@@ -35,87 +38,158 @@ namespace LibraryQA.Views
             LogoutRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        private void IssueButton_Click(object sender, RoutedEventArgs e) // Issue a loan for the specified member and book
+        private void IssueButton_Click(object sender, RoutedEventArgs e) // Issue a loan for the selected member and book
         {
-            if (!int.TryParse(MemberIdBox.Text.Trim(), out int memberId) ||
-                !int.TryParse(BookIdBox.Text.Trim(), out int bookId)) // Validate that the Member ID and Book ID are numeric
+            if (MemberComboBox.SelectedItem is not PickerItem selectedMember ||
+                BookComboBox.SelectedItem is not PickerItem selectedBook)
             {
-                ShowStatus("Please enter a valid numeric Member ID and Book ID.", isError: true);
+                ShowStatus("Please select a member and a book.", isError: true);
                 return;
             }
 
-            using var db = new DatabaseHelper(App.ConnectionString);
+            var service = new MemberActionsService(App.ConnectionString);
+            var result = service.BorrowBook(selectedBook.Id, selectedMember.Id);
 
-            var book = db.GetBookById(bookId);
-            if (book == null) // Check if the book exists in the database
+            if (!result.Success)
             {
-                ShowStatus($"No book found with ID {bookId}.", isError: true);
+                ShowStatus(result.Message, isError: true);
                 return;
             }
 
-            if (!string.Equals(book["Status"]?.ToString(), "Available", StringComparison.OrdinalIgnoreCase)) // Check if the book is available for loan
-            {
-                ShowStatus($"'{book["Title"]}' is already {book["Status"]} and cannot be issued.", isError: true);
-                return;
-            }
-
-            var loanDate = DateTime.Now.Date;
-            var dueDate = loanDate.AddDays(LoanPeriodDays);
-
-            var loanId = db.CreateLoan(bookId, memberId, loanDate, dueDate);
-            if (loanId == null) // Check if the loan was successfully created
-            {
-                ShowStatus("Unable to issue the loan. The item may no longer be available.", isError: true);
-                return;
-            }
-
-            ShowStatus($"Loan #{loanId} issued for '{book["Title"]}' (due {dueDate:yyyy-MM-dd}).", isError: false);
+            ShowStatus($"Loan #{result.LoanId} issued for '{result.BookTitle}' (due {result.DueDate:yyyy-MM-dd}).", isError: false);
             RefreshAllData();
         }
 
-        private void ReturnButton_Click(object sender, RoutedEventArgs e) // Process the return of a loan for the specified member and loan ID
+        private void ReturnButton_Click(object sender, RoutedEventArgs e) // Process the return of the selected active loan
         {
-            if (!int.TryParse(MemberIdBox.Text.Trim(), out int memberId) ||
-                !int.TryParse(LoanIdBox.Text.Trim(), out int loanId)) // Validate that the Member ID and Loan ID are numeric
+            if (LoanComboBox.SelectedItem is not PickerItem selectedLoan)
             {
-                ShowStatus("Please enter a valid numeric Member ID and Loan ID to process a return.", isError: true);
+                ShowStatus("Please select an active loan to return.", isError: true);
                 return;
             }
+
+            if (ConditionComboBox.SelectedItem is not ComboBoxItem selectedConditionItem)
+            {
+                ShowStatus("Please select the condition of the returned item.", isError: true);
+                return;
+            }
+
+            string condition = selectedConditionItem.Content?.ToString() ?? "Good";
+            int loanId = selectedLoan.Id;
 
             using var db = new DatabaseHelper(App.ConnectionString);
 
             var loan = db.GetLoanById(loanId);
-            if (loan == null) // Check if the loan exists in the database
+            if (loan == null || loan["ReturnDate"] != DBNull.Value) // Guard against a stale picker entry (already returned since the list was loaded)
             {
-                ShowStatus($"No loan found with ID {loanId}.", isError: true);
+                ShowStatus($"Loan #{loanId} could not be returned - it may have already been processed. Refreshing the list.", isError: true);
+                RefreshAllData();
                 return;
             }
 
-            if (loan["ReturnDate"] != DBNull.Value) // Check if the loan has already been returned
-            {
-                ShowStatus($"Loan #{loanId} has already been returned.", isError: true);
-                return;
-            }
-
-            if (Convert.ToInt32(loan["MemberID"]) != memberId) // Check if the loan belongs to the specified member
-            {
-                ShowStatus($"Loan #{loanId} belongs to Member ID {loan["MemberID"]}, not {memberId}. Please check the IDs and try again.", isError: true);
-                return;
-            }
-
-            bool success = db.ProcessReturn(loanId, DateTime.Now.Date);
+            bool success = db.ProcessReturn(loanId, DateTime.Now.Date, condition); // Also updates the book's status internally (Available or Reserved)
             if (!success)
             {
                 ShowStatus($"Loan #{loanId} could not be returned. It may already be returned or does not exist.", isError: true);
                 return;
             }
 
-            int bookId = Convert.ToInt32(loan["BookID"]); // Get the Book ID associated with the loan to update its status
-            string newStatus = db.HasActiveReservation(bookId) ? "Reserved" : "Available";
-            db.UpdateBookStatus(bookId, newStatus);
-
-            ShowStatus($"Loan #{loanId} processed as returned.", isError: false);
+            ShowStatus($"Loan #{loanId} processed as returned ({condition} condition).", isError: false);
             RefreshAllData();
+        }
+
+        private void SuspendButton_Click(object sender, RoutedEventArgs e) // Suspend the selected member's account (REQ-19)
+        {
+            if (MembersListView.SelectedItem is not MemberRow selectedMember)
+            {
+                ShowMemberActionStatus("Please select a member from the list.", isError: true);
+                return;
+            }
+
+            using var db = new DatabaseHelper(App.ConnectionString);
+            db.SetAccountStatus(selectedMember.AccountId, "Suspended");
+
+            ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) has been suspended.", isError: false);
+            RefreshAllData();
+        }
+
+        private void ReactivateButton_Click(object sender, RoutedEventArgs e) // Reactivate the selected member's account (REQ-19)
+        {
+            if (MembersListView.SelectedItem is not MemberRow selectedMember)
+            {
+                ShowMemberActionStatus("Please select a member from the list.", isError: true);
+                return;
+            }
+
+            using var db = new DatabaseHelper(App.ConnectionString);
+            db.SetAccountStatus(selectedMember.AccountId, "Active");
+
+            ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) has been reactivated.", isError: false);
+            RefreshAllData();
+        }
+
+        private void LoadMemberPicker() // Populates the Issue-Loan member picker with active (non-suspended) members only
+        {
+            using var db = new DatabaseHelper(App.ConnectionString);
+
+            var members = db.GetAllMembers()
+                .Where(row => string.Equals(row["AccountStatus"]?.ToString(), "Active", StringComparison.OrdinalIgnoreCase))
+                .Select(row => new PickerItem
+                {
+                    Id = Convert.ToInt32(row["AccountID"]),
+                    Display = $"{row["AccountID"]} - {row["FirstName"]} {row["LastName"]} ({row["Username"]})"
+                })
+                .ToList();
+
+            MemberComboBox.ItemsSource = members;
+        }
+
+        private void LoadBookPicker() // Populates the Issue-Loan book picker with Available books only
+        {
+            using var db = new DatabaseHelper(App.ConnectionString);
+
+            var books = db.SearchCatalogue("") // empty search term matches the whole catalogue
+                .Where(row => string.Equals(row["Status"]?.ToString(), "Available", StringComparison.OrdinalIgnoreCase))
+                .Select(row => new PickerItem
+                {
+                    Id = Convert.ToInt32(row["BookID"]),
+                    Display = $"{row["BookID"]} - {row["Title"]}"
+                })
+                .ToList();
+
+            BookComboBox.ItemsSource = books;
+        }
+
+        private void LoadLoanPicker() // Populates the Process-Return picker with every currently active loan system-wide
+        {
+            using var db = new DatabaseHelper(App.ConnectionString);
+
+            var loans = db.GetAllActiveLoans()
+                .Select(row => new PickerItem
+                {
+                    Id = Convert.ToInt32(row["LoanID"]),
+                    Display = $"#{row["LoanID"]} - {row["Title"]} ({row["MemberName"]}, due {row["DueDate"]})"
+                })
+                .ToList();
+
+            LoanComboBox.ItemsSource = loans;
+        }
+
+        private void LoadMembersList() // Populates the Members tab with every member, any status, for suspend/reactivate management
+        {
+            using var db = new DatabaseHelper(App.ConnectionString);
+
+            var members = db.GetAllMembers()
+                .Select(row => new MemberRow
+                {
+                    AccountId = Convert.ToInt32(row["AccountID"]),
+                    FullName = $"{row["FirstName"]} {row["LastName"]}",
+                    Username = row["Username"]?.ToString() ?? "",
+                    Status = row["AccountStatus"]?.ToString() ?? ""
+                })
+                .ToList();
+
+            MembersListView.ItemsSource = members;
         }
 
         private void LoadOverdueItems() // Load all overdue loans and display them in the list view
@@ -186,6 +260,9 @@ namespace LibraryQA.Views
             TotalOnLoanText.Text = $"Items currently on loan: {stats["TotalOnLoan"]}";
             TotalOverdueText.Text = $"Items overdue: {stats["TotalOverdue"]}";
             TotalReservationsText.Text = $"Active reservations: {stats["TotalReservations"]}";
+            TotalMembersText.Text = $"Total members: {stats["TotalMembers"]}";
+            TotalBooksText.Text = $"Total books: {stats["TotalBooks"]}";
+            AvailableBooksText.Text = $"Available books: {stats["AvailableBooks"]}";
 
             var mostBorrowed = db.GetMostBorrowedBooks()
                 .Select(row => new MostBorrowedItem // Map each row from the database to a MostBorrowedItem object
@@ -198,10 +275,18 @@ namespace LibraryQA.Views
             MostBorrowedListView.ItemsSource = mostBorrowed;
         }
 
-        private void ShowStatus(string message, bool isError) // Display a status message in the interface, with different formatting for errors and success messages
+        private void ShowStatus(string message, bool isError) // Display a status message for Issue/Return, with different formatting for errors and success messages
         {
             IssueReturnStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
             IssueReturnStatusText.Foreground = isError
+                ? System.Windows.Media.Brushes.Red
+                : System.Windows.Media.Brushes.Green;
+        }
+
+        private void ShowMemberActionStatus(string message, bool isError) // Display a status message for Suspend/Reactivate actions
+        {
+            MemberActionStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
+            MemberActionStatusText.Foreground = isError
                 ? System.Windows.Media.Brushes.Red
                 : System.Windows.Media.Brushes.Green;
         }
@@ -212,6 +297,24 @@ namespace LibraryQA.Views
             ReservationStatusText.Foreground = isError
                 ? System.Windows.Media.Brushes.Red
                 : System.Windows.Media.Brushes.Green;
+        }
+
+        // Generic display item for the Member/Book/Loan pickers - WPF's ComboBox
+        // shows ToString() by default when no DisplayMemberPath is set, so this
+        // keeps the XAML simple while still carrying the real ID for lookups.
+        private class PickerItem
+        {
+            public int Id { get; set; }
+            public string Display { get; set; } = "";
+            public override string ToString() => Display;
+        }
+
+        private class MemberRow // Represents a member account row for the Members management tab
+        {
+            public int AccountId { get; set; }
+            public string FullName { get; set; } = "";
+            public string Username { get; set; } = "";
+            public string Status { get; set; } = "";
         }
 
         private class OverdueItem // Represents an overdue loan item with relevant details for display in the staff interface
