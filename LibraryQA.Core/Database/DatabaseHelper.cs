@@ -115,11 +115,15 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public bool SetAccountStatus(int accountId, string status) // Sets an account's status to Active or Suspended (REQ-19: staff suspend/reactivate)
+        // The four states an account can be in. Kept here as the one list the schema's CHECK
+        // constraint must agree with (REQ-16 Pending, REQ-19 Suspended, REQ-21 Locked).
+        public static readonly string[] AccountStatuses = { "Active", "Pending", "Suspended", "Locked" };
+
+        public bool SetAccountStatus(int accountId, string status) // Sets an account's status (REQ-16 activation, REQ-19 suspend/reactivate, REQ-21 lockout)
         {
-            if (status != "Active" && status != "Suspended")
+            if (Array.IndexOf(AccountStatuses, status) < 0)
             {
-                throw new ArgumentException("Invalid status. Must be 'Active' or 'Suspended'.");
+                throw new ArgumentException($"Invalid status. Must be one of: {string.Join(", ", AccountStatuses)}.");
             }
 
             OpenConnection();
@@ -217,7 +221,7 @@ namespace LibraryQA.Core.Database
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT AccountID, Username, FirstName, LastName, AccountStatus
+                    SELECT AccountID, Username, FirstName, LastName, Email, PhoneNumber, AccountStatus
                     FROM Accounts
                     WHERE Role = 'Member' AND IsActive = 1
                     ORDER BY LastName, FirstName";
@@ -232,6 +236,8 @@ namespace LibraryQA.Core.Database
                             ["Username"] = reader["Username"],
                             ["FirstName"] = reader["FirstName"],
                             ["LastName"] = reader["LastName"],
+                            ["Email"] = reader["Email"] ?? "Not Provided",
+                            ["PhoneNumber"] = reader["PhoneNumber"] ?? "Not Provided",
                             ["AccountStatus"] = reader["AccountStatus"]
                         });
                     }
@@ -239,6 +245,85 @@ namespace LibraryQA.Core.Database
             }
 
             return results;
+        }
+
+        // REQ-16: lets a screen check a username before the whole form is filled in. This is
+        // advisory only - CreateAccount re-checks inside its transaction, so a username taken
+        // between the two calls is still rejected.
+        public bool UsernameExists(string username)
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "SELECT COUNT(*) FROM Accounts WHERE Username = @username";
+                command.Parameters.AddWithValue("@username", username);
+
+                return Convert.ToInt32(command.ExecuteScalar()) > 0;
+            }
+        }
+
+        // REQ-16: registers a new account. Returns null if the username is already taken, so the
+        // uniqueness rule is enforced by the database rather than by a check the caller might skip.
+        public int? CreateAccount(string username, string passwordHash, string role, string firstName,
+            string lastName, string? email, string? phoneNumber, string accountStatus)
+        {
+            if (role != "Member" && role != "Staff")
+            {
+                throw new ArgumentException("Invalid role. Must be 'Member' or 'Staff'.");
+            }
+
+            if (Array.IndexOf(AccountStatuses, accountStatus) < 0)
+            {
+                throw new ArgumentException($"Invalid status. Must be one of: {string.Join(", ", AccountStatuses)}.");
+            }
+
+            OpenConnection();
+
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                using (var existsCommand = _connection.CreateCommand())
+                {
+                    existsCommand.Transaction = transaction;
+                    existsCommand.CommandText = "SELECT COUNT(*) FROM Accounts WHERE Username = @username";
+                    existsCommand.Parameters.AddWithValue("@username", username);
+
+                    if (Convert.ToInt32(existsCommand.ExecuteScalar()) > 0)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+                }
+
+                using (var insertCommand = _connection.CreateCommand())
+                {
+                    insertCommand.Transaction = transaction;
+                    insertCommand.CommandText = @"
+                        INSERT INTO Accounts (Username, PasswordHash, Role, FirstName, LastName, Email, PhoneNumber, AccountStatus)
+                        VALUES (@username, @passwordHash, @role, @firstName, @lastName, @email, @phoneNumber, @accountStatus);
+                        SELECT last_insert_rowid();";
+
+                    insertCommand.Parameters.AddWithValue("@username", username);
+                    insertCommand.Parameters.AddWithValue("@passwordHash", passwordHash);
+                    insertCommand.Parameters.AddWithValue("@role", role);
+                    insertCommand.Parameters.AddWithValue("@firstName", firstName);
+                    insertCommand.Parameters.AddWithValue("@lastName", lastName);
+                    insertCommand.Parameters.AddWithValue("@email", (object?)email ?? DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@phoneNumber", (object?)phoneNumber ?? DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@accountStatus", accountStatus);
+
+                    var result = insertCommand.ExecuteScalar();
+
+                    if (result == null)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+
+                    transaction.Commit();
+                    return Convert.ToInt32(result);
+                }
+            }
         }
 
         #endregion

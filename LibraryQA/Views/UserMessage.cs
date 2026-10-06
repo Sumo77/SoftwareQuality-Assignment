@@ -41,6 +41,11 @@ namespace LibraryQA.Views
         public const string AccountSuspended =
             "This account has been suspended. Please contact the Library Staff.";
 
+        // Shown only after correct credentials, for the same reason (REQ-16: a new account is not
+        // usable until library staff activate it).
+        public const string AccountPending =
+            "This account is awaiting activation by library staff.";
+
         // Displays a message in the supplied status TextBlock.
         public static void Show(TextBlock? target, MessageKind kind, string message)
         {

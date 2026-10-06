@@ -168,7 +168,7 @@ namespace LibraryQA.Views
             RefreshAllData();
         }
 
-        private void ReactivateButton_Click(object sender, RoutedEventArgs e) // Reactivate the selected member's account (REQ-19)
+        private void ActivateButton_Click(object sender, RoutedEventArgs e) // Activate a new account or reactivate a suspended one (REQ-16, REQ-19)
         {
             UserMessage.Clear(MemberActionStatusText);
 
@@ -178,24 +178,46 @@ namespace LibraryQA.Views
                 return;
             }
 
+            // Pending (REQ-16) and Suspended (REQ-19) both end as Active, so they are one action.
+            // What matters to staff is the outcome, not which of the two states it started in.
+            if (selectedMember.Status == "Active")
+            {
+                ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) is already active.", isError: true);
+                return;
+            }
+
+            if (selectedMember.Status == "Locked")
+            {
+                // Clearing a lockout must also reset the failed-attempt count, so it has its own
+                // action rather than being folded in here (REQ-21).
+                ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) is locked - use Unlock Selected instead.", isError: true);
+                return;
+            }
+
+            string previousStatus = selectedMember.Status;
+
             try
             {
                 using var db = new DatabaseHelper(App.ConnectionString);
 
                 if (!db.SetAccountStatus(selectedMember.AccountId, "Active"))
                 {
-                    ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) could not be reactivated.", isError: true);
+                    ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) could not be activated.", isError: true);
                     return;
                 }
             }
             catch (SqliteException ex) // DEF-11
             {
-                Debug.WriteLine($"Reactivate failed - database error: {ex.Message}");
+                Debug.WriteLine($"Activate failed - database error: {ex.Message}");
                 UserMessage.Show(MemberActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
                 return;
             }
 
-            ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) has been reactivated.", isError: false);
+            string outcome = previousStatus == "Pending"
+                ? "has been activated and can now log in"
+                : "has been reactivated";
+
+            ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) {outcome}.", isError: false);
             RefreshAllData();
         }
 
@@ -256,8 +278,11 @@ namespace LibraryQA.Views
                     AccountId = Convert.ToInt32(row["AccountID"]),
                     FullName = $"{row["FirstName"]} {row["LastName"]}",
                     Username = row["Username"]?.ToString() ?? "",
+                    Email = row["Email"]?.ToString() ?? "",
+                    PhoneNumber = row["PhoneNumber"]?.ToString() ?? "",
                     Status = row["AccountStatus"]?.ToString() ?? ""
                 })
+                .OrderBy(member => member.AccountId)
                 .ToList();
 
             MembersListView.ItemsSource = members;
@@ -389,6 +414,8 @@ namespace LibraryQA.Views
             public int AccountId { get; set; }
             public string FullName { get; set; } = "";
             public string Username { get; set; } = "";
+            public string Email { get; set; } = "";
+            public string PhoneNumber { get; set; } = "";
             public string Status { get; set; } = "";
         }
 

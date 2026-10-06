@@ -11,6 +11,7 @@ namespace LibraryQA.Core.Services
     {
         private const string StaffRole = "Staff";
         private const string SuspendedStatus = "Suspended";
+        private const string ActiveStatus = "Active";
 
         private readonly string _connectionString;
 
@@ -32,8 +33,9 @@ namespace LibraryQA.Core.Services
                 if (accountId == null)
                     return null;
 
-                string? status = db.GetAccountStatus(accountId.Value);
-                if (string.Equals(status, SuspendedStatus, StringComparison.OrdinalIgnoreCase))
+                // Only an Active account may log in. Pending (REQ-16), Suspended (REQ-19) and
+                // Locked (REQ-21) are all refused here, so no screen can bypass the check.
+                if (!string.Equals(db.GetAccountStatus(accountId.Value), ActiveStatus, StringComparison.OrdinalIgnoreCase))
                     return null;
 
                 string? role = db.GetAccountRole(accountId.Value);
@@ -43,20 +45,29 @@ namespace LibraryQA.Core.Services
             }
         }
 
-        public bool IsSuspendedWithValidCredentials(string username, string password)
+        // Returns the account's status, but only once the password has been verified, so the login
+        // screen can explain a refusal without revealing that an account exists (REQ-11, DEF-20).
+        // Null means the credentials themselves were wrong.
+        public string? GetStatusWithValidCredentials(string username, string password)
         {
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
-                return false;
+                return null;
 
             using (var db = new DatabaseHelper(_connectionString))
             {
                 int? accountId = db.ValidateLogin(username.Trim(), HashPassword(password));
 
                 if (accountId == null)
-                    return false;
+                    return null;
 
-                return string.Equals(db.GetAccountStatus(accountId.Value), SuspendedStatus, StringComparison.OrdinalIgnoreCase);
+                return db.GetAccountStatus(accountId.Value);
             }
+        }
+
+        public bool IsSuspendedWithValidCredentials(string username, string password) // REQ-19, DEF-20
+        {
+            return string.Equals(GetStatusWithValidCredentials(username, password),
+                SuspendedStatus, StringComparison.OrdinalIgnoreCase);
         }
 
         public static string HashPassword(string password) // Hash the password using SHA256 for secure comparison with stored hashes

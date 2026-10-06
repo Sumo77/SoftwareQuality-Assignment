@@ -108,13 +108,15 @@
                                 <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding AccountId}"/>
                                 <GridViewColumn Header="Name" Width="180" DisplayMemberBinding="{Binding FullName}"/>
                                 <GridViewColumn Header="Username" Width="150" DisplayMemberBinding="{Binding Username}"/>
+                                <GridViewColumn Header="Email" Width="200" DisplayMemberBinding="{Binding Email}"/>
+                                <GridViewColumn Header="Phone" Width="120" DisplayMemberBinding="{Binding PhoneNumber}"/>
                                 <GridViewColumn Header="Status" Width="100" DisplayMemberBinding="{Binding Status}"/>
                             </GridView>
                         </ListView.View>
                     </ListView>
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <Button Content="Suspend Selected" Padding="8,4" Margin="0,0,8,0" Click="SuspendButton_Click"/>
-                        <Button Content="Reactivate Selected" Padding="8,4" Click="ReactivateButton_Click"/>
+                        <Button Content="Activate Selected" Padding="8,4" Click="ActivateButton_Click"/>
                     </StackPanel>
                     <TextBlock x:Name="MemberActionStatusText" Margin="0,12,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
