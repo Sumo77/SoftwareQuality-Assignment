@@ -43,20 +43,19 @@ namespace LibraryQA.Core.Services
             }
         }
 
-        public bool IsAccountSuspended(string username) // REQ-19: checked by LoginView, independent of password, so a suspended account is flagged even on a correct-password attempt
+        public bool IsSuspendedWithValidCredentials(string username, string password)
         {
-            if (string.IsNullOrWhiteSpace(username))
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
                 return false;
 
             using (var db = new DatabaseHelper(_connectionString))
             {
-                int? accountId = db.GetAccountIdByUsername(username.Trim());
+                int? accountId = db.ValidateLogin(username.Trim(), HashPassword(password));
 
                 if (accountId == null)
-                    return false; // unknown username - let the normal invalid-credentials flow handle it
+                    return false;
 
-                string? status = db.GetAccountStatus(accountId.Value);
-                return string.Equals(status, SuspendedStatus, StringComparison.OrdinalIgnoreCase);
+                return string.Equals(db.GetAccountStatus(accountId.Value), SuspendedStatus, StringComparison.OrdinalIgnoreCase);
             }
         }
 

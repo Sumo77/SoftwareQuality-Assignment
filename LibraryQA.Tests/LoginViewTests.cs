@@ -64,5 +64,43 @@ namespace LibraryQA.Tests
 
             Assert.IsNull(result);
         }
+
+        // TC-20: A suspended member cannot log in, and reactivating restores access (REQ-19, REQ-12)
+        [TestMethod]
+        public void SetAccountStatus_SuspendThenReactivate_BlocksThenRestoresLogin()
+        {
+            int? accountId = _auth.GetAccountId("alice.member");
+            Assert.IsNotNull(accountId);
+
+            using (var db = new DatabaseHelper($"Data Source={_dbPath}"))
+            {
+                Assert.IsTrue(db.SetAccountStatus(accountId.Value, "Suspended"));
+            }
+
+            Assert.IsNull(_auth.Authenticate("alice.member", "member123"),
+                "A suspended account must be refused even with the correct password.");
+
+            using (var db = new DatabaseHelper($"Data Source={_dbPath}"))
+            {
+                Assert.IsTrue(db.SetAccountStatus(accountId.Value, "Active"));
+            }
+
+            Assert.AreEqual(UserRole.Member, _auth.Authenticate("alice.member", "member123"),
+                "Reactivating the account must restore access.");
+        }
+
+        // TC-39: A wrong password and an unknown username are rejected identically, so the
+        // login screen cannot be used to confirm whether an account exists (DEF-20, REQ-11)
+        [TestMethod]
+        public void Authenticate_WrongPasswordAndUnknownUsername_AreRejectedIdentically()
+        {
+            UserRole? wrongPassword = _auth.Authenticate("alice.member", "wrongpassword");
+            UserRole? unknownUsername = _auth.Authenticate("ghost.member", "wrongpassword");
+
+            Assert.IsNull(wrongPassword);
+            Assert.IsNull(unknownUsername);
+            Assert.AreEqual(wrongPassword, unknownUsername,
+                "Both failures must be indistinguishable to the caller.");
+        }
     }
 }

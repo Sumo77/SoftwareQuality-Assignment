@@ -37,6 +37,10 @@ namespace LibraryQA.Views
         // used to confirm whether a username exists (REQ-11).
         public const string InvalidCredentials = "Invalid username or password.";
 
+        // Shown only after correct credentials, so it never reveals that an account exists (REQ-19).
+        public const string AccountSuspended =
+            "This account has been suspended. Please contact the Library Staff.";
+
         // Displays a message in the supplied status TextBlock.
         public static void Show(TextBlock? target, MessageKind kind, string message)
         {

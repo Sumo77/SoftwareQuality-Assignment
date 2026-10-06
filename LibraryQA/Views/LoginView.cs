@@ -45,10 +45,17 @@ namespace LibraryQA.Views
                 PasswordBox.Focus(); // Focuses on the password box for user convenience
                 return;
             }
-            if (_authService.IsAccountSuspended(username))
+            
+            if (role == null)
             {
-                UserMessage.Show(ErrorText, MessageKind.Error, "This account has been suspended. Please contact library staff.");
-                PasswordBox.Clear();
+                // The suspension message is only shown once the password has been verified, so a
+                // wrong password and an unknown username remain indistinguishable (REQ-11).
+                UserMessage.Show(ErrorText, MessageKind.Error,
+                    _authService.IsSuspendedWithValidCredentials(username, password)
+                        ? UserMessage.AccountSuspended
+                        : UserMessage.InvalidCredentials);
+
+                PasswordBox.Clear(); // Remove invalid input from password box for user convenience
                 return;
             }
 
