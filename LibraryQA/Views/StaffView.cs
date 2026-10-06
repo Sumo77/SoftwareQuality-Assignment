@@ -221,6 +221,45 @@ namespace LibraryQA.Views
             RefreshAllData();
         }
 
+        private void UnlockButton_Click(object sender, RoutedEventArgs e) // Clear a lockout after too many failed logins (REQ-21)
+        {
+            UserMessage.Clear(MemberActionStatusText);
+
+            if (MembersListView.SelectedItem is not MemberRow selectedMember)
+            {
+                ShowMemberActionStatus(UserMessage.NothingSelected("member"), isError: true);
+                return;
+            }
+
+            if (selectedMember.Status != "Locked") // Only a Locked account needs clearing
+            {
+                ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) is not locked - the account is {selectedMember.Status}.", isError: true);
+                return;
+            }
+
+            try
+            {
+                using var db = new DatabaseHelper(App.ConnectionString);
+
+                // Status and attempt count are reset together, so the account is not left one
+                // failed attempt away from locking again.
+                if (!db.UnlockAccount(selectedMember.AccountId))
+                {
+                    ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) could not be unlocked.", isError: true);
+                    return;
+                }
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Unlock failed - database error: {ex.Message}");
+                UserMessage.Show(MemberActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                return;
+            }
+
+            ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) has been unlocked.", isError: false);
+            RefreshAllData();
+        }
+
         private void LoadMemberPicker() // Populates the Issue-Loan member picker with active (non-suspended) members only
         {
             using var db = new DatabaseHelper(App.ConnectionString);
@@ -280,7 +319,8 @@ namespace LibraryQA.Views
                     Username = row["Username"]?.ToString() ?? "",
                     Email = row["Email"]?.ToString() ?? "",
                     PhoneNumber = row["PhoneNumber"]?.ToString() ?? "",
-                    Status = row["AccountStatus"]?.ToString() ?? ""
+                    Status = row["AccountStatus"]?.ToString() ?? "",
+                    FailedAttempts = Convert.ToInt32(row["FailedLoginAttempts"])
                 })
                 .OrderBy(member => member.AccountId)
                 .ToList();
@@ -306,6 +346,19 @@ namespace LibraryQA.Views
                 .ToList();
 
             OverdueListView.ItemsSource = overdue;
+
+            // REQ-17: the same notice wording the member sees, summarised for staff. It clears
+            // itself once the items are returned, because they leave the overdue list.
+            string? notice = OverdueNotice.ForStaff(db.GetAllOverdueLoans());
+
+            if (notice == null)
+            {
+                UserMessage.Clear(OverdueNoticeText);
+            }
+            else
+            {
+                UserMessage.Show(OverdueNoticeText, MessageKind.Warning, notice);
+            }
         }
 
         private void LoadReservations() // Load all active reservations and display them in the list view
@@ -417,6 +470,7 @@ namespace LibraryQA.Views
             public string Email { get; set; } = "";
             public string PhoneNumber { get; set; } = "";
             public string Status { get; set; } = "";
+            public int FailedAttempts { get; set; } // REQ-21: how close the account is to locking
         }
 
         private class OverdueItem // Represents an overdue loan item with relevant details for display in the staff interface

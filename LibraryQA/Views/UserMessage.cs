@@ -46,6 +46,16 @@ namespace LibraryQA.Views
         public const string AccountPending =
             "This account is awaiting activation by library staff.";
 
+        // Shown only after correct credentials, for the same reason (REQ-21).
+        public const string AccountLocked =
+            "This account has been locked after too many failed login attempts. Please contact the Library Staff.";
+
+        // Shown on a rejected login. Deliberately gives no count of remaining attempts and no hint
+        // that the username exists - a countdown would confirm an account to an attacker, which is
+        // the leak DEF-20 closed (REQ-11, REQ-21).
+        public const string InvalidCredentialsWithLockoutWarning =
+            InvalidCredentials + " Repeated failed attempts will lock the account.";
+
         // Displays a message in the supplied status TextBlock.
         public static void Show(TextBlock? target, MessageKind kind, string message)
         {

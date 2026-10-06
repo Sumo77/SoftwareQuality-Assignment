@@ -86,7 +86,8 @@ namespace LibraryQA.Views
             {
                 "Pending" => UserMessage.AccountPending,     // REQ-16: not yet activated by staff
                 "Suspended" => UserMessage.AccountSuspended, // REQ-19
-                _ => UserMessage.InvalidCredentials
+                "Locked" => UserMessage.AccountLocked,       // REQ-21
+                _ => UserMessage.InvalidCredentialsWithLockoutWarning, // REQ-11, REQ-21: wrong password or unknown username
             };
         }
 

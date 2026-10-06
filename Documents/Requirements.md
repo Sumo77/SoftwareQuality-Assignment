@@ -83,7 +83,7 @@ The system shall require staff to manually approve a member’s loan or reservat
 - Given a pending request is rejected by staff, when the rejection is recorded, then that item no longer counts towards the member's limit.
 
 ### REQ-19 – Member Suspension
-The system shall allow staff to suspend or reactivate a member account using the account status field (Active / Pending / Suspended / Locked). A suspended member shall be denied the ability to log in and shall see a message stating their account is suspended rather than a generic invalid-credentials message.
+The system shall allow staff to suspend or reactivate a member account from their portal using the corresponding button(s) to update account status field (Active / Pending / Suspended / Locked). A suspended member shall be denied the ability to log in and shall see a message stating their account is suspended rather than a generic invalid-credentials message.
 
 **Acceptance Criteria:**
 - Given a member account in good standing, when staff suspend the account, then its status updates accordingly and takes effect immediately.
@@ -99,7 +99,7 @@ The system shall automatically ‘cancel’ a reservation if the reserved item i
 - Given a reservation expires, when the member next logs in, then the reservation no longer appears in their active reservations.
 
 ### REQ-21 – Login Lockout
-The system shall ‘lock’ (suspend) a login account after 5 consecutive failed login attempts, denying further attempts until the ‘lock’ is cleared. An account lock can be cleared by a staff member, who is able to reactivate the account from their portal using the account status field (Active / Pending / Suspended / Locked).
+The system shall ‘lock’ (suspend) a login account after 5 consecutive failed login attempts, denying further attempts until the ‘lock’ is cleared. An account lock can be cleared by a staff member, who is able to reactivate the account from their portal using the corresponding button(s) to update account status field (Active / Pending / Suspended / Locked).
 
 **Acceptance Criteria:**
 - Given a login account has 4 consecutive failed attempts, when a 5th attempt also fails, then the account is locked and further login attempts are denied.

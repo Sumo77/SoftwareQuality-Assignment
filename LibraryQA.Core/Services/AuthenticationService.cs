@@ -12,6 +12,8 @@ namespace LibraryQA.Core.Services
         private const string StaffRole = "Staff";
         private const string SuspendedStatus = "Suspended";
         private const string ActiveStatus = "Active";
+        private const string LockedStatus = "Locked";
+        public const int MaxFailedLoginAttempts = 5;
 
         private readonly string _connectionString;
 
@@ -21,27 +23,54 @@ namespace LibraryQA.Core.Services
                 ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        public UserRole? Authenticate(string username, string password) // Returns the account's role, or null if credentials are rejected or the account is suspended.
+        public UserRole? Authenticate(string username, string password) // Returns the account's role, or null if credentials are rejected or the account is not Active.
         {
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
                 return null;
 
             using (var db = new DatabaseHelper(_connectionString))
             {
-                int? accountId = db.ValidateLogin(username.Trim(), HashPassword(password));
+                string trimmedUsername = username.Trim();
+                int? accountId = db.ValidateLogin(trimmedUsername, HashPassword(password));
 
                 if (accountId == null)
+                {
+                    CountFailedAttempt(db, trimmedUsername);
                     return null;
+                }
 
                 // Only an Active account may log in. Pending (REQ-16), Suspended (REQ-19) and
                 // Locked (REQ-21) are all refused here, so no screen can bypass the check.
                 if (!string.Equals(db.GetAccountStatus(accountId.Value), ActiveStatus, StringComparison.OrdinalIgnoreCase))
                     return null;
 
+                db.ResetFailedLoginAttempts(accountId.Value); // REQ-21: a successful login clears the count
+
                 string? role = db.GetAccountRole(accountId.Value);
 
                 // Fails closed: only an exact 'Staff' match grants staff access.
                 return role == StaffRole ? UserRole.Staff : UserRole.Member;
+            }
+        }
+
+        // REQ-21: records a failed attempt against a known, active account and locks it at the
+        // threshold. An unknown username is ignored, so the lockout cannot be used to discover
+        // which usernames exist, and a Pending or Suspended account is left as it is.
+        private static void CountFailedAttempt(DatabaseHelper db, string username)
+        {
+            int? accountId = db.GetAccountIdByUsername(username);
+
+            if (accountId == null)
+                return;
+
+            if (!string.Equals(db.GetAccountStatus(accountId.Value), ActiveStatus, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            db.IncrementFailedLoginAttempts(accountId.Value);
+
+            if (db.GetFailedLoginAttempts(accountId.Value) >= MaxFailedLoginAttempts)
+            {
+                db.SetAccountStatus(accountId.Value, LockedStatus);
             }
         }
 

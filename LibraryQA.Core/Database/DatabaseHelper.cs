@@ -221,7 +221,7 @@ namespace LibraryQA.Core.Database
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT AccountID, Username, FirstName, LastName, Email, PhoneNumber, AccountStatus
+                    SELECT AccountID, Username, FirstName, LastName, Email, PhoneNumber, AccountStatus, FailedLoginAttempts
                     FROM Accounts
                     WHERE Role = 'Member' AND IsActive = 1
                     ORDER BY LastName, FirstName";
@@ -238,7 +238,8 @@ namespace LibraryQA.Core.Database
                             ["LastName"] = reader["LastName"],
                             ["Email"] = reader["Email"] ?? "Not Provided",
                             ["PhoneNumber"] = reader["PhoneNumber"] ?? "Not Provided",
-                            ["AccountStatus"] = reader["AccountStatus"]
+                            ["AccountStatus"] = reader["AccountStatus"],
+                            ["FailedLoginAttempts"] = reader["FailedLoginAttempts"]
                         });
                     }
                 }
@@ -1139,6 +1140,25 @@ namespace LibraryQA.Core.Database
             }
 
             return results;
+        }
+
+        // REQ-21: staff clear a lockout. The status and the attempt counter are reset in the same
+        // statement, so an unlocked account can never be left one failure away from locking again.
+        public bool UnlockAccount(int accountId)
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    UPDATE Accounts
+                    SET AccountStatus = 'Active', FailedLoginAttempts = 0
+                    WHERE AccountID = @accountId";
+
+                command.Parameters.AddWithValue("@accountId", accountId);
+
+                return command.ExecuteNonQuery() > 0;
+            }
         }
 
         #endregion
