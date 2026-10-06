@@ -104,12 +104,13 @@
                 </StackPanel>
             </TabItem>
 
-            <TabItem Header="Members">
+            <TabItem Header="Account Management">
                 <StackPanel Margin="12">
-                    <ListView x:Name="MembersListView" Height="320">
+                    <ListView x:Name="AccountsListView" Height="320">
                         <ListView.View>
                             <GridView>
                                 <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding AccountId}"/>
+                                <GridViewColumn Header="Role" Width="80" DisplayMemberBinding="{Binding Role}"/>
                                 <GridViewColumn Header="Name" Width="180" DisplayMemberBinding="{Binding FullName}"/>
                                 <GridViewColumn Header="Username" Width="150" DisplayMemberBinding="{Binding Username}"/>
                                 <GridViewColumn Header="Email" Width="200" DisplayMemberBinding="{Binding Email}"/>
@@ -124,7 +125,7 @@
                         <Button Content="Activate Selected" Padding="8,4" Click="ActivateButton_Click"/>
                         <Button Content="Unlock Selected" Padding="8,4" Margin="8,0,0,0" Click="UnlockButton_Click"/>
                     </StackPanel>
-                    <TextBlock x:Name="MemberActionStatusText" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                    <TextBlock x:Name="AccountActionStatusText" Margin="0,12,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </TabItem>
 

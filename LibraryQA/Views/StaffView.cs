@@ -33,7 +33,7 @@ namespace LibraryQA.Views
                 LoadLoanPicker();
                 LoadOverdueItems();
                 LoadReservations();
-                LoadMembersList();
+                LoadAccountsList();
                 LoadReporting();
             }
             catch (SqliteException ex) // DEF-11: a database failure must not close the application
@@ -52,7 +52,7 @@ namespace LibraryQA.Views
         {
             UserMessage.Clear(IssueReturnStatusText);
 
-            if (MemberComboBox.SelectedItem is not PickerItem selectedMember)
+            if (MemberComboBox.SelectedItem is not PickerItem selectedAccount)
             {
                 ShowStatus(UserMessage.NothingSelected("member"), isError: true);
                 return;
@@ -69,7 +69,7 @@ namespace LibraryQA.Views
             try
             {
                 var service = new MemberActionsService(App.ConnectionString);
-                result = service.BorrowBook(selectedBook.Id, selectedMember.Id);
+                result = service.BorrowBook(selectedBook.Id, selectedAccount.Id);
             }
             catch (SqliteException ex) // DEF-11
             {
@@ -138,11 +138,19 @@ namespace LibraryQA.Views
 
         private void SuspendButton_Click(object sender, RoutedEventArgs e) // Suspend the selected member's account (REQ-19)
         {
-            UserMessage.Clear(MemberActionStatusText);
+            UserMessage.Clear(AccountActionStatusText);
 
-            if (MembersListView.SelectedItem is not MemberRow selectedMember)
+            if (AccountsListView.SelectedItem is not AccountRow selectedAccount)
             {
-                ShowMemberActionStatus(UserMessage.NothingSelected("member"), isError: true);
+                ShowAccountActionStatus(UserMessage.NothingSelected("account"), isError: true);
+                return;
+            }
+
+            // REQ-19 is member suspension. Staff accounts are listed here so a locked one can be
+            // unlocked, not so they can be suspended - including the account currently signed in.
+            if (selectedAccount.Role == "Staff")
+            {
+                ShowAccountActionStatus("Staff accounts cannot be suspended.", isError: true);
                 return;
             }
 
@@ -151,65 +159,65 @@ namespace LibraryQA.Views
                 using var db = new DatabaseHelper(App.ConnectionString);
 
                 // The return value was previously ignored, so a failed update still reported success.
-                if (!db.SetAccountStatus(selectedMember.AccountId, "Suspended"))
+                if (!db.SetAccountStatus(selectedAccount.AccountId, "Suspended"))
                 {
-                    ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) could not be suspended.", isError: true);
+                    ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) could not be suspended.", isError: true);
                     return;
                 }
             }
             catch (SqliteException ex) // DEF-11
             {
                 Debug.WriteLine($"Suspend failed - database error: {ex.Message}");
-                UserMessage.Show(MemberActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                UserMessage.Show(AccountActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
                 return;
             }
 
-            ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) has been suspended.", isError: false);
+            ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) has been suspended.", isError: false);
             RefreshAllData();
         }
 
         private void ActivateButton_Click(object sender, RoutedEventArgs e) // Activate a new account or reactivate a suspended one (REQ-16, REQ-19)
         {
-            UserMessage.Clear(MemberActionStatusText);
+            UserMessage.Clear(AccountActionStatusText);
 
-            if (MembersListView.SelectedItem is not MemberRow selectedMember)
+            if (AccountsListView.SelectedItem is not AccountRow selectedAccount)
             {
-                ShowMemberActionStatus(UserMessage.NothingSelected("member"), isError: true);
+                ShowAccountActionStatus(UserMessage.NothingSelected("account"), isError: true);
                 return;
             }
 
             // Pending (REQ-16) and Suspended (REQ-19) both end as Active, so they are one action.
             // What matters to staff is the outcome, not which of the two states it started in.
-            if (selectedMember.Status == "Active")
+            if (selectedAccount.Status == "Active")
             {
-                ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) is already active.", isError: true);
+                ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) is already active.", isError: true);
                 return;
             }
 
-            if (selectedMember.Status == "Locked")
+            if (selectedAccount.Status == "Locked")
             {
                 // Clearing a lockout must also reset the failed-attempt count, so it has its own
                 // action rather than being folded in here (REQ-21).
-                ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) is locked - use Unlock Selected instead.", isError: true);
+                ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) is locked - use Unlock Selected instead.", isError: true);
                 return;
             }
 
-            string previousStatus = selectedMember.Status;
+            string previousStatus = selectedAccount.Status;
 
             try
             {
                 using var db = new DatabaseHelper(App.ConnectionString);
 
-                if (!db.SetAccountStatus(selectedMember.AccountId, "Active"))
+                if (!db.SetAccountStatus(selectedAccount.AccountId, "Active"))
                 {
-                    ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) could not be activated.", isError: true);
+                    ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) could not be activated.", isError: true);
                     return;
                 }
             }
             catch (SqliteException ex) // DEF-11
             {
                 Debug.WriteLine($"Activate failed - database error: {ex.Message}");
-                UserMessage.Show(MemberActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                UserMessage.Show(AccountActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
                 return;
             }
 
@@ -217,23 +225,23 @@ namespace LibraryQA.Views
                 ? "has been activated and can now log in"
                 : "has been reactivated";
 
-            ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) {outcome}.", isError: false);
+            ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) {outcome}.", isError: false);
             RefreshAllData();
         }
 
         private void UnlockButton_Click(object sender, RoutedEventArgs e) // Clear a lockout after too many failed logins (REQ-21)
         {
-            UserMessage.Clear(MemberActionStatusText);
+            UserMessage.Clear(AccountActionStatusText);
 
-            if (MembersListView.SelectedItem is not MemberRow selectedMember)
+            if (AccountsListView.SelectedItem is not AccountRow selectedAccount)
             {
-                ShowMemberActionStatus(UserMessage.NothingSelected("member"), isError: true);
+                ShowAccountActionStatus(UserMessage.NothingSelected("account"), isError: true);
                 return;
             }
 
-            if (selectedMember.Status != "Locked") // Only a Locked account needs clearing
+            if (selectedAccount.Status != "Locked") // Only a Locked account needs clearing
             {
-                ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) is not locked - the account is {selectedMember.Status}.", isError: true);
+                ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) is not locked - the account is {selectedAccount.Status}.", isError: true);
                 return;
             }
 
@@ -243,20 +251,20 @@ namespace LibraryQA.Views
 
                 // Status and attempt count are reset together, so the account is not left one
                 // failed attempt away from locking again.
-                if (!db.UnlockAccount(selectedMember.AccountId))
+                if (!db.UnlockAccount(selectedAccount.AccountId))
                 {
-                    ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) could not be unlocked.", isError: true);
+                    ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) could not be unlocked.", isError: true);
                     return;
                 }
             }
             catch (SqliteException ex) // DEF-11
             {
                 Debug.WriteLine($"Unlock failed - database error: {ex.Message}");
-                UserMessage.Show(MemberActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                UserMessage.Show(AccountActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
                 return;
             }
 
-            ShowMemberActionStatus($"{selectedMember.FullName} (ID {selectedMember.AccountId}) has been unlocked.", isError: false);
+            ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) has been unlocked.", isError: false);
             RefreshAllData();
         }
 
@@ -307,14 +315,15 @@ namespace LibraryQA.Views
             LoanComboBox.ItemsSource = loans;
         }
 
-        private void LoadMembersList() // Populates the Members tab with every member, any status, for suspend/reactivate management
+        private void LoadAccountsList() // Populates the Accounts tab with every account, any role or status, for suspend / activate / unlock management
         {
             using var db = new DatabaseHelper(App.ConnectionString);
 
-            var members = db.GetAllMembers()
-                .Select(row => new MemberRow
+            var members = db.GetAllAccounts()
+                .Select(row => new AccountRow
                 {
                     AccountId = Convert.ToInt32(row["AccountID"]),
+                    Role = row["Role"]?.ToString() ?? "",
                     FullName = $"{row["FirstName"]} {row["LastName"]}",
                     Username = row["Username"]?.ToString() ?? "",
                     Email = row["Email"]?.ToString() ?? "",
@@ -325,7 +334,7 @@ namespace LibraryQA.Views
                 .OrderBy(member => member.AccountId)
                 .ToList();
 
-            MembersListView.ItemsSource = members;
+            AccountsListView.ItemsSource = members;
         }
 
         private void LoadOverdueItems() // Load all overdue loans and display them in the list view
@@ -442,9 +451,9 @@ namespace LibraryQA.Views
             UserMessage.Show(IssueReturnStatusText, isError ? MessageKind.Warning : MessageKind.Success, message);
         }
 
-        private void ShowMemberActionStatus(string message, bool isError) // Suspend / Reactivate status line
+        private void ShowAccountActionStatus(string message, bool isError) // Suspend / Activate / Unlock status line
         {
-            UserMessage.Show(MemberActionStatusText, isError ? MessageKind.Warning : MessageKind.Success, message);
+            UserMessage.Show(AccountActionStatusText, isError ? MessageKind.Warning : MessageKind.Success, message);
         }
 
         private void ShowReservationStatus(string message, bool isError) // Reservation fulfilment status line
@@ -462,9 +471,10 @@ namespace LibraryQA.Views
             public override string ToString() => Display;
         }
 
-        private class MemberRow // Represents a member account row for the Members management tab
+        private class AccountRow // Represents one account row for the Accounts management tab
         {
             public int AccountId { get; set; }
+            public string Role { get; set; } = "";
             public string FullName { get; set; } = "";
             public string Username { get; set; } = "";
             public string Email { get; set; } = "";

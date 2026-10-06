@@ -248,6 +248,44 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
+        // REQ-19/REQ-21: every account, staff included, for the management tab. Staff accounts lock
+        // like any other, so they have to be visible here or a locked staff account is unrecoverable.
+        public List<Dictionary<string, object>> GetAllAccounts()
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT AccountID, Username, FirstName, LastName, Role, Email, PhoneNumber, AccountStatus, FailedLoginAttempts
+                    FROM Accounts
+                    WHERE IsActive = 1
+                    ORDER BY AccountID";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["AccountID"] = reader["AccountID"],
+                            ["Username"] = reader["Username"],
+                            ["FirstName"] = reader["FirstName"],
+                            ["LastName"] = reader["LastName"],
+                            ["Role"] = reader["Role"],
+                            ["Email"] = reader["Email"] ?? "",
+                            ["PhoneNumber"] = reader["PhoneNumber"] ?? "",
+                            ["AccountStatus"] = reader["AccountStatus"],
+                            ["FailedLoginAttempts"] = reader["FailedLoginAttempts"]
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
         // REQ-16: lets a screen check a username before the whole form is filled in. This is
         // advisory only - CreateAccount re-checks inside its transaction, so a username taken
         // between the two calls is still rejected.
