@@ -224,7 +224,7 @@ namespace LibraryQA.Tests
 
             using (var db = new DatabaseHelper(_connectionString))
             {
-                Assert.AreEqual(accountsBefore, db.GetAllAccounts().Count,
+                Assert.HasCount(accountsBefore, db.GetAllAccounts(),
                     "A rejected registration must not leave a partial account behind.");
             }
         }
@@ -265,7 +265,7 @@ namespace LibraryQA.Tests
 
             using (var db = new DatabaseHelper(_connectionString))
             {
-                Assert.AreEqual(accountsBefore, db.GetAllAccounts().Count);
+                Assert.HasCount(accountsBefore, db.GetAllAccounts());
                 Assert.AreEqual(0, db.GetFailedLoginAttempts(aliceId!.Value),
                     "A failure against one username must never be counted against another.");
             }

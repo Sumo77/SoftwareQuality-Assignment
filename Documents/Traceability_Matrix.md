@@ -87,7 +87,7 @@ John TC-12 to TC-19, Daria TC-20 to TC-29, Summer TC-30 to TC-54.
 | REQ-18 | Loan and Reservation Approval | Functional | — | — | Missing | No |
 | REQ-19 | Member Suspension | Functional | TC-20, TC-53 | — | Implemented | Yes |
 | REQ-20 | Reservation Expiry | Functional | — | — | Partial | No |
-| REQ-21 | Login Lockout | Non-Functional | TC-43, TC-44, TC-45, TC-49, TC-52, TC-53 | — | Implemented | Yes |
+| REQ-21 | Login Lockout | Functional | TC-43, TC-44, TC-45, TC-49, TC-52, TC-53 | — | Implemented | Yes |
 
 **Column meanings**
 

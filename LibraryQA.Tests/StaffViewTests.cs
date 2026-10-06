@@ -70,7 +70,7 @@ namespace LibraryQA.Tests
                 int? loanId = db.CreateLoan(invalidBookId, memberId: 1, DateTime.Today, DateTime.Today.AddDays(14));
 
                 Assert.IsNull(loanId, "No loan should be created for a non-existent book ID.");
-                Assert.AreEqual(loansBefore, db.GetAllActiveLoans().Count, "No loan record should have been added.");
+                Assert.HasCount(loansBefore, db.GetAllActiveLoans(), "No loan record should have been added.");
             }
         }
 
@@ -159,7 +159,7 @@ namespace LibraryQA.Tests
 
                 Assert.IsNotNull(loanId, "Collecting a held book must issue a loan.");
                 Assert.AreEqual("On Loan", db.GetBookById(7)!["Status"]?.ToString());
-                Assert.AreEqual(0, db.GetActiveReservations(3).Count,
+                Assert.IsEmpty(db.GetActiveReservations(3),
                     "The reservation must be closed once the book is collected.");
 
                 var loan = db.GetLoanById(loanId.Value);
