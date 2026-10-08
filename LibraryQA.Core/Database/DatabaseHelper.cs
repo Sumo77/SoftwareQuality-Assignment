@@ -9,7 +9,7 @@ namespace LibraryQA.Core.Database
 {
     // Database Helper, provides data access methods for the Library Management System
     // Handles all database queries and commands securely
-    public class DatabaseHelper : IDisposable
+    public partial class DatabaseHelper : IDisposable
     {
         private readonly string _connectionString;
         private SqliteConnection? _connection;

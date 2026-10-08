@@ -15,6 +15,7 @@ namespace LibraryQA.Views
         public StaffView() // Initialise Staff View
         {
             InitializeComponent();
+            CatalogueTab.CatalogueChanged += (_, _) => RefreshAllData();
         }
 
         private void StaffView_Loaded(object sender, RoutedEventArgs e) // Load all staff related data when the interface is loaded
