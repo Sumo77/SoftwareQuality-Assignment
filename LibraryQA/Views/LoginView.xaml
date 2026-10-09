@@ -18,6 +18,9 @@
 
             <Button x:Name="LoginButton" Content="Log In" Padding="8" IsDefault="True" Click="LoginButton_Click"/>
 
+            <Button x:Name="RegisterButton" Content="Create a Library Member Account" Padding="8" Margin="0,8,0,0"
+                Click="RegisterButton_Click"/>
+
             <TextBlock x:Name="ErrorText" Foreground="Red" TextWrapping="Wrap"
                        Margin="0,12,0,0" Visibility="Collapsed"/>
         </StackPanel>

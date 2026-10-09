@@ -16,6 +16,9 @@ namespace LibraryQA.Views
         // MainWindow connects to this to know when to swap to Member/Staff view
         public event EventHandler<UserRole>? LoginSucceeded;
 
+        // MainWindow listens to this to swap in the registration screen (REQ-16).
+        public event EventHandler? RegisterRequested;
+
         private readonly AuthenticationService _authService;
 
         public LoginView()
@@ -45,12 +48,6 @@ namespace LibraryQA.Views
                 PasswordBox.Focus(); // Focuses on the password box for user convenience
                 return;
             }
-            if (_authService.IsAccountSuspended(username))
-            {
-                UserMessage.Show(ErrorText, MessageKind.Error, "This account has been suspended. Please contact library staff.");
-                PasswordBox.Clear();
-                return;
-            }
 
             UserRole? role;
 
@@ -67,12 +64,31 @@ namespace LibraryQA.Views
 
             if (role == null)
             {
-                UserMessage.Show(ErrorText, MessageKind.Error, UserMessage.InvalidCredentials);
+                UserMessage.Show(ErrorText, MessageKind.Error, RefusalMessage(username, password));
                 PasswordBox.Clear(); // Remove invalid input from password box for user convenience
                 return;
             }
 
             LoginSucceeded?.Invoke(this, role.Value);
+        }
+
+        private void RegisterButton_Click(object sender, RoutedEventArgs e) // REQ-16: open the registration screen
+        {
+            RegisterRequested?.Invoke(this, EventArgs.Empty);
+        }
+
+        // Explains a refused login, but only once the password has been verified, so the screen
+        // cannot be used to discover which usernames exist (REQ-11, DEF-20). A wrong password and
+        // an unknown username both fall through to the same generic message.
+        private string RefusalMessage(string username, string password)
+        {
+            return _authService.GetStatusWithValidCredentials(username, password) switch
+            {
+                "Pending" => UserMessage.AccountPending,     // REQ-16: not yet activated by staff
+                "Suspended" => UserMessage.AccountSuspended, // REQ-19
+                "Locked" => UserMessage.AccountLocked,       // REQ-21
+                _ => UserMessage.InvalidCredentialsWithLockoutWarning, // REQ-11, REQ-21: wrong password or unknown username
+            };
         }
 
     }

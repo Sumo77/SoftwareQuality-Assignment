@@ -30,6 +30,29 @@ namespace LibraryQA.Views
             LoadMyLoans();
             LoadMyReservations();
             LoadLoanHistory();
+            ShowOverdueNotice();
+        }
+
+        // REQ-17: the member is told about overdue items as soon as they log in. The notice stops
+        // appearing once the item is returned, because a returned loan is no longer an active one.
+        private void ShowOverdueNotice()
+        {
+            try
+            {
+                using (var db = new DatabaseHelper(App.ConnectionString))
+                {
+                    string? notice = OverdueNotice.ForMember(db.GetActiveLoans(_memberId));
+
+                    if (notice != null)
+                    {
+                        UserMessage.Show(StatusText, MessageKind.Warning, notice);
+                    }
+                }
+            }
+            catch (SqliteException ex) // DEF-11: a database failure must not crash the application
+            {
+                Debug.WriteLine($"Could not check overdue items - database error: {ex.Message}");
+            }
         }
 
         private void LogoutButton_Click(object sender, RoutedEventArgs e) // Logout and return to the login interface
@@ -130,7 +153,8 @@ namespace LibraryQA.Views
                         Title = l["Title"]?.ToString() ?? "",
                         BorrowedOn = l["LoanDate"]?.ToString() ?? "",
                         DueDate = l["DueDate"]?.ToString() ?? "",
-                        Status = (bool)l["IsOverdue"] ? "Overdue" : "On Loan"
+                        Status = (bool)l["IsOverdue"] ? "Overdue" : "On Loan",
+                        DaysOverdue = Convert.ToInt32(l["DaysOverdue"])
                     }).ToList();
 
                     MyLoansListView.ItemsSource = loans;

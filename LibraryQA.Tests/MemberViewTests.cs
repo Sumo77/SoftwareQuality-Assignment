@@ -116,5 +116,40 @@ namespace LibraryQA.Tests
                     "Searching for a literal '_' should not match every book in the catalogue.");
             }
         }
+
+        // TC-14: Reserving a book that is on loan records the hold but leaves the book On Loan (DEF-06, REQ-3)
+        [TestMethod]
+        public void ReserveBook_BookOnLoan_KeepsStatusOnLoan()
+        {
+            // Seed: BookID 8 is On Loan to member 2 with no reservation; member 1 does not hold it.
+            var result = _service.ReserveBook(bookId: 8, memberId: 1);
+
+            Assert.IsTrue(result.Success, result.Message);
+
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                Assert.AreEqual("On Loan", db.GetBookById(8)!["Status"]?.ToString(),
+                    "A book must stay On Loan until the current borrower returns it.");
+                Assert.IsTrue(db.HasActiveReservation(8),
+                    "The reservation itself must still be recorded against the book.");
+            }
+        }
+
+        // TC-15: A member cannot reserve a book they already have on loan (DEF-13, REQ-3)
+        [TestMethod]
+        public void ReserveBook_MemberAlreadyHasItOnLoan_IsRejected()
+        {
+            // Seed: member 2 holds BookID 8 on LoanID 6.
+            var result = _service.ReserveBook(bookId: 8, memberId: 2);
+
+            Assert.IsFalse(result.Success);
+            Assert.AreEqual("You already have this book on loan.", result.Message);
+
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                Assert.IsFalse(db.HasActiveReservation(8),
+                    "A rejected reservation must not be written to the database.");
+            }
+        }
     }
 }

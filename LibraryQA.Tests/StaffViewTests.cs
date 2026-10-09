@@ -41,7 +41,7 @@ namespace LibraryQA.Tests
         // TC-4: GetTotalActiveReservationsCount reflects a newly added (third) reservation (REQ-6).
         // Note: this is a data-layer test - it does not exercise StaffView's UI display.
         [TestMethod]
-        public void GetTotalActiveReservationsCount_ThreeActiveReservationsSeeded_ReturnsThree()
+        public void GetTotalActiveReservationsCount_AfterNewReservation_ReturnsUpdatedCount()
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
@@ -58,18 +58,19 @@ namespace LibraryQA.Tests
 
         // TC-5: Invalid Book ID returns no catalogue record, so the guard clause rejects the loan before it is attempted (REQ-9)
         [TestMethod]
-        public void IssueLoan_InvalidBookId_FailsGracefullyWithoutCreatingLoan()
+        public void IssueLoan_InvalidBookId_RejectsGracefullyWithoutCreatingLoan()
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
-                int invalidBookId = 9999;
+                const int invalidBookId = 9999;
 
-                var book = db.GetBookById(invalidBookId);
-                Assert.IsNull(book, "Precondition check: book ID should not exist.");
+                Assert.IsNull(db.GetBookById(invalidBookId), "Precondition check: book ID should not exist.");
 
-                int? loanId = book == null ? null : db.CreateLoan(invalidBookId, memberId: 1, DateTime.Today, DateTime.Today.AddDays(14));
+                int loansBefore = db.GetAllActiveLoans().Count;
+                int? loanId = db.CreateLoan(invalidBookId, memberId: 1, DateTime.Today, DateTime.Today.AddDays(14));
 
                 Assert.IsNull(loanId, "No loan should be created for a non-existent book ID.");
+                Assert.HasCount(loansBefore, db.GetAllActiveLoans(), "No loan record should have been added.");
             }
         }
 
@@ -99,15 +100,19 @@ namespace LibraryQA.Tests
                 // The recorded return date should fall within the window the call was made, so the return is processed close to real time.
                 Assert.IsTrue(returnDate.Date >= beforeCall.Date && returnDate.Date <= afterCall.Date);
 
-                // The book's catalogue status must also reflect the return (Available, or Reserved if a hold exists).
+                // Hardcoded rather than recomputed with HasActiveReservation: Check Loan 3's book has an
+                // unfulfilled reservation in the seed data, and reusing the call ProcessReturn relies
+                // on would let a fault in that shared logic go undetected (DEF-17).
+                Assert.AreEqual(7, bookId, "Precondition check: loan 3 is on book 7.");
+
                 var book = db.GetBookById(bookId);
-                string expectedStatus = db.HasActiveReservation(bookId) ? "Reserved" : "Available";
-                Assert.AreEqual(expectedStatus, book!["Status"]?.ToString());
+                Assert.AreEqual("Reserved", book!["Status"]?.ToString(),
+                    "A returned book with an unfulfilled reservation must become Reserved, not Available.");
             }
         }
 
-        // TC-7: A member account resolves only to the Member role, and role-based routing sends
-        // Member accounts to MemberView, never StaffView (REQ-7, REQ-11)
+        // TC-7: A member account resolves only to the Member role (REQ-7, REQ-11).
+        // Routing is covered separately by TC-7b.
         [TestMethod]
         public void Authenticate_MemberAccount_ResolvesToMemberRoleOnly()
         {
@@ -130,12 +135,58 @@ namespace LibraryQA.Tests
             Assert.AreEqual(typeof(MemberView), viewType);
         }
 
+        // TC-7c: The routing decision sends Staff accounts to StaffView (REQ-6, REQ-7)
         [TestMethod]
         public void ResolveViewType_StaffRole_ResolvesToStaffView()
         {
             var viewType = MainWindow.ResolveViewType(UserRole.Staff);
 
             Assert.AreEqual(typeof(StaffView), viewType);
+        }
+
+        // TC-13: Fulfilling a reservation closes it and issues the loan to the collecting member (REQ-3, REQ-6)
+        [TestMethod]
+        public void FulfillReservation_HeldBook_ClosesReservationAndIssuesLoan()
+        {
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                // Seed: LoanID 3 is BookID 7 on loan to member 1, and ReservationID 1 holds BookID 7 for member 3.
+                Assert.IsTrue(db.ProcessReturn(3, DateTime.Today, "Good"));
+                Assert.AreEqual("Reserved", db.GetBookById(7)!["Status"]?.ToString(),
+                    "A returned book with a pending hold must be held as Reserved.");
+
+                int? loanId = db.FulfillReservation(1, DateTime.Today, 14);
+
+                Assert.IsNotNull(loanId, "Collecting a held book must issue a loan.");
+                Assert.AreEqual("On Loan", db.GetBookById(7)!["Status"]?.ToString());
+                Assert.IsEmpty(db.GetActiveReservations(3),
+                    "The reservation must be closed once the book is collected.");
+
+                var loan = db.GetLoanById(loanId.Value);
+                Assert.AreEqual(3, Convert.ToInt32(loan!["MemberID"]),
+                    "The loan must be issued to the reserving member, not the previous borrower.");
+            }
+        }
+
+        // TC-16: The condition chosen at return is recorded on the loan (REQ-2b, REQ-14)
+        [TestMethod]
+        public void ProcessReturn_WithCondition_RecordsItOnTheLoan()
+        {
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                // Seed: LoanID 6 is BookID 8 on loan to member 2.
+                Assert.IsTrue(db.ProcessReturn(6, DateTime.Today, "Damaged"));
+
+                string? recorded = null;
+                foreach (var loan in db.GetLoanHistory(2))
+                {
+                    if (Convert.ToInt32(loan["LoanID"]) == 6)
+                        recorded = loan["ReturnCondition"]?.ToString();
+                }
+
+                Assert.AreEqual("Damaged", recorded,
+                    "The condition selected at return must be stored against the loan, not defaulted.");
+            }
         }
     }
 }
