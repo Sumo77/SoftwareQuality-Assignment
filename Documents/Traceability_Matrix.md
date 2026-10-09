@@ -64,33 +64,38 @@ John TC-12 to TC-19, Daria TC-20 to TC-29, Summer TC-30 to TC-54.
 
 ## Matrix
 
-| Req ID | Requirement | Type | Test Case(s) | Defects raised | Implementation | Tested |
-|---|---|---|---|---|---|---|
-| REQ-1 | Catalogue Management | Functional | TC-12 | DEF-14 | Partial | Partial |
-| REQ-2a | Borrow | Functional | TC-8 | DEF-08 | Implemented | Yes |
-| REQ-2b | Return | Functional | TC-6, TC-16 | DEF-08, DEF-10 | Implemented | Yes |
-| REQ-3 | Reservations | Functional | TC-9, TC-13, TC-14, TC-15 | DEF-03, DEF-06, DEF-13 | Implemented | Yes |
-| REQ-4 | Overdue | Functional | TC-30, TC-31, TC-32, TC-33, TC-34 | — | Implemented | Yes |
-| REQ-5 | Member Portal | Functional | TC-1, TC-11 | — | Implemented | Yes |
-| REQ-6 | Staff Portal | Functional | TC-2, TC-4, TC-7c, TC-42, TC-49 | DEF-03 | Implemented | Partial |
-| REQ-7 | Access Control | Functional | TC-1, TC-2, TC-7, TC-7b, TC-7c | — | Implemented | Yes |
-| REQ-8 | Loan Limits | Functional | TC-10 | DEF-07 | Implemented | Partial |
-| REQ-9 | Input Validation | Functional | TC-5, TC-12, TC-41, TC-50 | DEF-12, DEF-14 | Implemented | Partial |
-| REQ-10 | Usability | Non-Functional | Usability walkthrough (Week 11) | DEF-04, DEF-12 | Partial | Planned |
-| REQ-11 | Security | Non-Functional | TC-2, TC-3, TC-7, TC-39, TC-40, TC-52 | — | Implemented | Yes |
-| REQ-12 | Reliability | Non-Functional | TC-3, TC-36 | DEF-11 | Implemented | Partial |
-| REQ-13 | Maintainability | Non-Functional | Code review at merge, CI quality gates | DEF-08 | Implemented | Informal |
-| REQ-14 | Integrity | Non-Functional | TC-8, TC-9, TC-35 | DEF-03, DEF-06, DEF-08 | Implemented | Partial |
-| REQ-15 | Performance | Non-Functional | TC-37 | — | Partial | Partial |
-| REQ-16 | Account Creation | Functional | TC-40, TC-41, TC-42, TC-50, TC-51 | — | Implemented | Yes |
-| REQ-17 | Overdue Notices | Functional | TC-46, TC-47, TC-48, TC-54 | — | Implemented | Yes |
-| REQ-18 | Loan and Reservation Approval | Functional | — | — | Missing | No |
-| REQ-19 | Member Suspension | Functional | TC-20, TC-53 | — | Implemented | Yes |
-| REQ-20 | Reservation Expiry | Functional | — | — | Partial | No |
-| REQ-21 | Login Lockout | Functional | TC-43, TC-44, TC-45, TC-49, TC-52, TC-53 | — | Implemented | Yes |
+| Req ID | Requirement | Type | Implemented feature | Test Case(s) | Result | Defects raised | Implementation | Tested |
+|---|---|---|---|---|---|---|---|---|
+| REQ-1 | Catalogue Management | Functional | Catalogue search by title, author or ISBN with status; staff add, edit and remove records | TC-12 | Pass | DEF-14 | Partial | Partial |
+| REQ-2a | Borrow | Functional | Staff issue loan: 14-day due date, status set to On Loan | TC-8 | Pass | DEF-06, DEF-07, DEF-08, DEF-13 | Implemented | Yes |
+| REQ-2b | Return | Functional | Process return: closes the loan, records condition, resets status | TC-6, TC-16 | Pass | DEF-02, DEF-08, DEF-09, DEF-10, DEF-17 | Implemented | Yes |
+| REQ-3 | Reservations | Functional | Reserve an on-loan book; one reservation per book; fulfilled on return | TC-9, TC-13, TC-14, TC-15 | Pass | DEF-03, DEF-06, DEF-13 | Implemented | Yes |
+| REQ-4 | Overdue | Functional | Overdue flag and days overdue, calculated in OverdueRules from the local date | TC-30, TC-31, TC-32, TC-33, TC-34 | Pass | DEF-09 | Implemented | Yes |
+| REQ-5 | Member Portal | Functional | Member view: own current loans, loan history and reservations | TC-1, TC-11 | Pass | DEF-01 | Implemented | Yes |
+| REQ-6 | Staff Portal | Functional | Staff view: report summary, overdue list, member and account lists | TC-2, TC-4, TC-7c, TC-42, TC-49 | Pass | DEF-01, DEF-03, DEF-16 | Implemented | Partial |
+| REQ-7 | Access Control | Functional | Role-based routing to the Member or Staff view | TC-1, TC-2, TC-7, TC-7b, TC-7c | Pass | DEF-01, DEF-17 | Implemented | Yes |
+| REQ-8 | Loan Limits | Functional | 2-item loan limit, including pending requests | TC-10 | Pass | DEF-07 | Implemented | Partial |
+| REQ-9 | Input Validation | Functional | Field-level validation messages; search wildcards escaped | TC-5, TC-12, TC-41, TC-50 | Pass | DEF-07, DEF-12, DEF-14, DEF-16 | Implemented | Partial |
+| REQ-10 | Usability | Non-Functional | Shared message style (UserMessage); members, books and loans picked from lists | Usability walkthrough (Week 11) | Pending | DEF-01, DEF-04, DEF-12 | Partial | Planned |
+| REQ-11 | Security | Non-Functional | SHA-256 password hashes; identical rejection for a wrong password or unknown username | TC-2, TC-3, TC-7, TC-39, TC-40, TC-52 | Pass | DEF-01, DEF-17, DEF-20 | Implemented | Yes |
+| REQ-12 | Reliability | Non-Functional | Database errors caught in every view; failed seeding retried | TC-3, TC-36 | Pass | DEF-04, DEF-09, DEF-11, DEF-15, DEF-18, DEF-19 | Implemented | Partial |
+| REQ-13 | Maintainability | Non-Functional | Business rules held in Core services; shared UserMessage class | Code review at merge, CI quality gates | Reviewed | DEF-08 | Implemented | Informal |
+| REQ-14 | Integrity | Non-Functional | Book status kept in step with loan and reservation records | TC-8, TC-9, TC-35 | Pass | DEF-02, DEF-03, DEF-05, DEF-06, DEF-08, DEF-10, DEF-13, DEF-15, DEF-17 | Implemented | Partial |
+| REQ-15 | Performance | Non-Functional | Catalogue search on a 5,000-book catalogue | TC-37 | Pass | — | Partial | Partial |
+| REQ-16 | Account Creation | Functional | Registration screen; account stays Pending until staff activate it (RegistrationService) | TC-40, TC-41, TC-42, TC-50, TC-51 | Pass | — | Implemented | Yes |
+| REQ-17 | Overdue Notices | Functional | Overdue notice at member login and on the staff dashboard (OverdueNotice) | TC-46, TC-47, TC-48, TC-54 | Pass | — | Implemented | Yes |
+| REQ-18 | Loan and Reservation Approval | Functional | Loan and reservation requests held Pending until staff approve or reject | — | Not run | — | Missing | No |
+| REQ-19 | Member Suspension | Functional | Staff suspend and reactivate accounts; suspended message at login | TC-20, TC-53 | Pass | DEF-19, DEF-20 | Implemented | Yes |
+| REQ-20 | Reservation Expiry | Functional | Uncollected reservation cancelled after 5 days; book returns to Available | — | Not run | — | Partial | No |
+| REQ-21 | Login Lockout | Functional | Account locked after 5 failed attempts; staff unlock | TC-43, TC-44, TC-45, TC-49, TC-52, TC-53 | Pass | — | Implemented | Yes |
 
 **Column meanings**
 
+- **Implemented feature** — What was built to satisfy the requirement.
+- **Result** — Pass, Fail, Pending, Reviewed, or Not run. The outcome of the verification listed
+  under Test Case(s): Pass/Fail for test cases, Reviewed for code review, Pending for a planned
+  walkthrough, Not run where no test exists yet.
+- **Defects raised** — Every defect in `Defect_Report.md` whose Related field names this requirement.
 - **Implementation** — Implemented, Partial, or Missing. Whether the behaviour the requirement
   describes is built.
 - **Tested** — Yes, Partial, No, Planned, or Informal. Whether a passing test case verifies it.
