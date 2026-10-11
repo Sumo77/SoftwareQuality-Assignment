@@ -26,22 +26,22 @@ namespace LibraryQA.Views
 
         private void RefreshAllData() // Refresh all data displayed in the staff interface
         {
-try
-{
-    LoadMemberPicker();
-    LoadBookPicker();
-    LoadLoanPicker();
-    LoadOverdueItems();
-    LoadReservations();
-    LoadAccountsList();
-    LoadReporting();
-    LoadPendingRequests();
-}
-catch (SqliteException ex) // DEF-11: a database failure must not close the application
-{
-    Debug.WriteLine($"Could not load staff data - database error: {ex.Message}");
-    UserMessage.Show(IssueReturnStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
-}
+            try
+            {
+                LoadMemberPicker();
+                LoadBookPicker();
+                LoadLoanPicker();
+                LoadOverdueItems();
+                LoadReservations();
+                LoadAccountsList();
+                LoadReporting();
+                LoadPendingRequests();
+            }
+            catch (SqliteException ex) // DEF-11: a database failure must not close the application
+            {
+                Debug.WriteLine($"Could not load staff data - database error: {ex.Message}");
+                UserMessage.Show(IssueReturnStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+            }
         }
 
         private void LogoutButton_Click(object sender, RoutedEventArgs e) // Logout and return to the login interface

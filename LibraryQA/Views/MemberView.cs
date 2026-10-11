@@ -157,32 +157,32 @@ namespace LibraryQA.Views
                 {
                     var rawLoans = db.GetActiveLoans(_memberId);
 
-    var loans = rawLoans.Select(l => new MyLoanDisplayModel // Map the raw loan data to the display model
-    {
-        LoanID = Convert.ToInt32(l["LoanID"]),
-        BookID = Convert.ToInt32(l["BookID"]),
-        Title = l["Title"]?.ToString() ?? "",
-        BorrowedOn = l["LoanDate"]?.ToString() ?? "",
-        DueDate = l["DueDate"]?.ToString() ?? "",
-        Status = (bool)l["IsOverdue"] ? "Overdue" : "On Loan",
-        DaysOverdue = Convert.ToInt32(l["DaysOverdue"])
-    }).ToList();
+                    var loans = rawLoans.Select(l => new MyLoanDisplayModel // Map the raw loan data to the display model
+                    {
+                        LoanID = Convert.ToInt32(l["LoanID"]),
+                        BookID = Convert.ToInt32(l["BookID"]),
+                        Title = l["Title"]?.ToString() ?? "",
+                        BorrowedOn = l["LoanDate"]?.ToString() ?? "",
+                        DueDate = l["DueDate"]?.ToString() ?? "",
+                        Status = (bool)l["IsOverdue"] ? "Overdue" : "On Loan",
+                        DaysOverdue = Convert.ToInt32(l["DaysOverdue"])
+                    }).ToList();
 
-    // REQ-18: pending loan requests are shown too, so the member can see they are awaiting approval
-    var pendingLoans = db.GetPendingLoans()
-        .Where(l => Convert.ToInt32(l["MemberID"]) == _memberId)
-        .Select(l => new MyLoanDisplayModel
-        {
-            LoanID = Convert.ToInt32(l["LoanID"]),
-            BookID = Convert.ToInt32(l["BookID"]),
-            Title = l["Title"]?.ToString() ?? "",
-            BorrowedOn = l["LoanDate"]?.ToString() ?? "",
-            DueDate = l["DueDate"]?.ToString() ?? "",
-            Status = "Pending"
-        });
+                    // REQ-18: pending loan requests are shown too, so the member can see they are awaiting approval
+                    var pendingLoans = db.GetPendingLoans()
+                        .Where(l => Convert.ToInt32(l["MemberID"]) == _memberId)
+                        .Select(l => new MyLoanDisplayModel
+                        {
+                            LoanID = Convert.ToInt32(l["LoanID"]),
+                            BookID = Convert.ToInt32(l["BookID"]),
+                            Title = l["Title"]?.ToString() ?? "",
+                            BorrowedOn = l["LoanDate"]?.ToString() ?? "",
+                            DueDate = l["DueDate"]?.ToString() ?? "",
+                            Status = "Pending"
+                        });
 
-    MyLoansListView.ItemsSource = loans.Concat(pendingLoans).ToList();
-}
+                    MyLoansListView.ItemsSource = loans.Concat(pendingLoans).ToList();
+                }
             }
             catch (SqliteException ex) // DEF-11
             {
@@ -199,16 +199,16 @@ namespace LibraryQA.Views
             {
                 using (var db = new DatabaseHelper(App.ConnectionString))
                 {
-var rawReservations = db.GetActiveReservations(_memberId);
+                    var rawReservations = db.GetActiveReservations(_memberId);
 
-var reservations = rawReservations.Select(r => new MyReservationDisplayModel // Map the raw reservation data to the display model
-{
-    ReservationID = Convert.ToInt32(r["ReservationID"]),
-    BookID = Convert.ToInt32(r["BookID"]),
-    Title = r["Title"]?.ToString() ?? "",
-    ReservedOn = r["ReservationDate"]?.ToString() ?? "",
-    Status = r["Status"]?.ToString() ?? ""
-}).ToList();
+                    var reservations = rawReservations.Select(r => new MyReservationDisplayModel // Map the raw reservation data to the display model
+                    {
+                        ReservationID = Convert.ToInt32(r["ReservationID"]),
+                        BookID = Convert.ToInt32(r["BookID"]),
+                        Title = r["Title"]?.ToString() ?? "",
+                        ReservedOn = r["ReservationDate"]?.ToString() ?? "",
+                        Status = r["Status"]?.ToString() ?? ""
+                    }).ToList();
 
                     MyReservationsListView.ItemsSource = reservations;
                 }

@@ -59,22 +59,22 @@ namespace LibraryQA.Core.Services
                 DateTime loanDate = DateTime.Today;
                 DateTime dueDate = loanDate.AddDays(LoanPeriodDays);
 
-// REQ-18: the loan request is held as "Pending" until a staff member approves or rejects it
-int? loanId = db.CreateLoanRequest(bookId, memberId, loanDate, dueDate);
+                // REQ-18: the loan request is held as "Pending" until a staff member approves or rejects it
+                int? loanId = db.CreateLoanRequest(bookId, memberId, loanDate, dueDate);
 
                 if (loanId == null) // Check book loan request was successful
                 {
                     return new BorrowResult { Success = false, Message = "Unable to complete the loan request. Please try again." };
                 }
 
-return new BorrowResult
-{
-    Success = true,
-    Message = "Your request to borrow " + book["Title"] + " has been submitted and is pending staff approval.",
-    DueDate = dueDate,
-    LoanId = loanId,
-    BookTitle = book["Title"]?.ToString()
-};
+                return new BorrowResult
+                {
+                    Success = true,
+                    Message = "Your request to borrow " + book["Title"] + " has been submitted and is pending staff approval.",
+                    DueDate = dueDate,
+                    LoanId = loanId,
+                    BookTitle = book["Title"]?.ToString()
+                };
             }
         }
 

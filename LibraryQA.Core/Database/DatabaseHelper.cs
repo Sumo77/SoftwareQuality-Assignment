@@ -958,7 +958,7 @@ namespace LibraryQA.Core.Database
     WHERE L.ReturnDate IS NULL AND L.Status = 'Active' AND date(@today) > date(L.DueDate)
     ORDER BY L.DueDate";
 
-command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+                command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
 
                 using (var reader = command.ExecuteReader())
                 {
@@ -1553,7 +1553,7 @@ command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInf
                 stats["TotalOnLoan"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Overdue items
-command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND Status = 'Active' AND date(@today) > date(DueDate)";
+                command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND Status = 'Active' AND date(@today) > date(DueDate)";
                 stats["TotalOverdue"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Active reservations
