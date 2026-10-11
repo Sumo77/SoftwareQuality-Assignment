@@ -1,20 +1,20 @@
-﻿using System;
+﻿using LibraryQA.Core.Database;
+using LibraryQA.Core.Services;
+using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
-using LibraryQA.Core.Database;
-using LibraryQA.Core.Services;
+using System.Diagnostics;
+using Microsoft.Data.Sqlite;
 
 namespace LibraryQA.Views
 {
-    // Staff Interface, allowing staff to manage loans, returns, reservations, and view reporting data
+    // Staff Interface, allowing staff to manage loans, returns, reservations, members, and view reporting data
     public partial class StaffView : UserControl
     {
-        private const int LoanPeriodDays = 14;
-
         public event EventHandler? LogoutRequested;
-
-        public StaffView() // Initialise Member View
+        private const int LoanPeriodDays = 14;
+        public StaffView() // Initialise Staff View
         {
             InitializeComponent();
         }
@@ -26,10 +26,22 @@ namespace LibraryQA.Views
 
         private void RefreshAllData() // Refresh all data displayed in the staff interface
         {
-            LoadOverdueItems();
-            LoadReservations();
-            LoadReporting();
-            LoadPendingRequests();
+try
+{
+    LoadMemberPicker();
+    LoadBookPicker();
+    LoadLoanPicker();
+    LoadOverdueItems();
+    LoadReservations();
+    LoadAccountsList();
+    LoadReporting();
+    LoadPendingRequests();
+}
+catch (SqliteException ex) // DEF-11: a database failure must not close the application
+{
+    Debug.WriteLine($"Could not load staff data - database error: {ex.Message}");
+    UserMessage.Show(IssueReturnStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+}
         }
 
         private void LogoutButton_Click(object sender, RoutedEventArgs e) // Logout and return to the login interface
@@ -37,87 +49,293 @@ namespace LibraryQA.Views
             LogoutRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        private void IssueButton_Click(object sender, RoutedEventArgs e) // Issue a loan for the specified member and book
+        private void IssueButton_Click(object sender, RoutedEventArgs e) // Issue a loan for the selected member and book
         {
-            if (!int.TryParse(MemberIdBox.Text.Trim(), out int memberId) ||
-                !int.TryParse(BookIdBox.Text.Trim(), out int bookId)) // Validate that the Member ID and Book ID are numeric
+            UserMessage.Clear(IssueReturnStatusText);
+
+            if (MemberComboBox.SelectedItem is not PickerItem selectedAccount)
             {
-                ShowStatus("Please enter a valid numeric Member ID and Book ID.", isError: true);
+                ShowStatus(UserMessage.NothingSelected("member"), isError: true);
                 return;
             }
 
-            using var db = new DatabaseHelper(App.ConnectionString);
-
-            var book = db.GetBookById(bookId);
-            if (book == null) // Check if the book exists in the database
+            if (BookComboBox.SelectedItem is not PickerItem selectedBook)
             {
-                ShowStatus($"No book found with ID {bookId}.", isError: true);
+                ShowStatus(UserMessage.NothingSelected("book"), isError: true);
                 return;
             }
 
-            if (!string.Equals(book["Status"]?.ToString(), "Available", StringComparison.OrdinalIgnoreCase)) // Check if the book is available for loan
+            BorrowResult result;
+
+            try
             {
-                ShowStatus($"'{book["Title"]}' is already {book["Status"]} and cannot be issued.", isError: true);
+                var service = new MemberActionsService(App.ConnectionString);
+                result = service.BorrowBook(selectedBook.Id, selectedAccount.Id);
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Issue loan failed - database error: {ex.Message}");
+                UserMessage.Show(IssueReturnStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
                 return;
             }
 
-            var loanDate = DateTime.Now.Date;
-            var dueDate = loanDate.AddDays(LoanPeriodDays);
-
-            var loanId = db.CreateLoan(bookId, memberId, loanDate, dueDate);
-            if (loanId == null) // Check if the loan was successfully created
+            if (!result.Success)
             {
-                ShowStatus("Unable to issue the loan. The item may no longer be available.", isError: true);
+                ShowStatus(result.Message, isError: true);
                 return;
             }
 
-            ShowStatus($"Loan #{loanId} issued for '{book["Title"]}' (due {dueDate:yyyy-MM-dd}).", isError: false);
+            ShowStatus($"Loan #{result.LoanId} issued for '{result.BookTitle}' (due {result.DueDate:yyyy-MM-dd}).", isError: false);
             RefreshAllData();
         }
 
-        private void ReturnButton_Click(object sender, RoutedEventArgs e) // Process the return of a loan for the specified member and loan ID
+        private void ReturnButton_Click(object sender, RoutedEventArgs e) // Process the return of the selected active loan
         {
-            if (!int.TryParse(MemberIdBox.Text.Trim(), out int memberId) ||
-                !int.TryParse(LoanIdBox.Text.Trim(), out int loanId)) // Validate that the Member ID and Loan ID are numeric
+            UserMessage.Clear(IssueReturnStatusText);
+
+            if (LoanComboBox.SelectedItem is not PickerItem selectedLoan)
             {
-                ShowStatus("Please enter a valid numeric Member ID and Loan ID to process a return.", isError: true);
+                ShowStatus(UserMessage.NothingSelected("loan to return"), isError: true);
                 return;
             }
 
+            if (ConditionComboBox.SelectedItem is not ComboBoxItem selectedConditionItem)
+            {
+                ShowStatus(UserMessage.NothingSelected("return condition"), isError: true);
+                return;
+            }
+
+            string condition = selectedConditionItem.Content?.ToString() ?? "Good";
+            int loanId = selectedLoan.Id;
+
+            try
+            {
+                using var db = new DatabaseHelper(App.ConnectionString);
+
+                var loan = db.GetLoanById(loanId);
+                if (loan == null || loan["ReturnDate"] != DBNull.Value) // Guard against a stale picker entry (already returned since the list was loaded)
+                {
+                    ShowStatus($"Loan #{loanId} could not be returned - it may have already been processed. Refreshing the list.", isError: true);
+                    RefreshAllData();
+                    return;
+                }
+
+                if (!db.ProcessReturn(loanId, DateTime.Now.Date, condition)) // Also updates the book's status internally (Available or Reserved)
+                {
+                    ShowStatus($"Loan #{loanId} could not be returned. It may already be returned or does not exist.", isError: true);
+                    return;
+                }
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Process return failed - database error: {ex.Message}");
+                UserMessage.Show(IssueReturnStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                return;
+            }
+
+            ShowStatus($"Loan #{loanId} processed as returned ({condition} condition).", isError: false);
+            RefreshAllData();
+        }
+
+        private void SuspendButton_Click(object sender, RoutedEventArgs e) // Suspend the selected member's account (REQ-19)
+        {
+            UserMessage.Clear(AccountActionStatusText);
+
+            if (AccountsListView.SelectedItem is not AccountRow selectedAccount)
+            {
+                ShowAccountActionStatus(UserMessage.NothingSelected("account"), isError: true);
+                return;
+            }
+
+            // REQ-19 is member suspension. Staff accounts are listed here so a locked one can be
+            // unlocked, not so they can be suspended - including the account currently signed in.
+            if (selectedAccount.Role == "Staff")
+            {
+                ShowAccountActionStatus("Staff accounts cannot be suspended.", isError: true);
+                return;
+            }
+
+            try
+            {
+                using var db = new DatabaseHelper(App.ConnectionString);
+
+                // The return value was previously ignored, so a failed update still reported success.
+                if (!db.SetAccountStatus(selectedAccount.AccountId, "Suspended"))
+                {
+                    ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) could not be suspended.", isError: true);
+                    return;
+                }
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Suspend failed - database error: {ex.Message}");
+                UserMessage.Show(AccountActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                return;
+            }
+
+            ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) has been suspended.", isError: false);
+            RefreshAllData();
+        }
+
+        private void ActivateButton_Click(object sender, RoutedEventArgs e) // Activate a new account or reactivate a suspended one (REQ-16, REQ-19)
+        {
+            UserMessage.Clear(AccountActionStatusText);
+
+            if (AccountsListView.SelectedItem is not AccountRow selectedAccount)
+            {
+                ShowAccountActionStatus(UserMessage.NothingSelected("account"), isError: true);
+                return;
+            }
+
+            // Pending (REQ-16) and Suspended (REQ-19) both end as Active, so they are one action.
+            // What matters to staff is the outcome, not which of the two states it started in.
+            if (selectedAccount.Status == "Active")
+            {
+                ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) is already active.", isError: true);
+                return;
+            }
+
+            if (selectedAccount.Status == "Locked")
+            {
+                // Clearing a lockout must also reset the failed-attempt count, so it has its own
+                // action rather than being folded in here (REQ-21).
+                ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) is locked - use Unlock Selected instead.", isError: true);
+                return;
+            }
+
+            string previousStatus = selectedAccount.Status;
+
+            try
+            {
+                using var db = new DatabaseHelper(App.ConnectionString);
+
+                if (!db.SetAccountStatus(selectedAccount.AccountId, "Active"))
+                {
+                    ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) could not be activated.", isError: true);
+                    return;
+                }
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Activate failed - database error: {ex.Message}");
+                UserMessage.Show(AccountActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                return;
+            }
+
+            string outcome = previousStatus == "Pending"
+                ? "has been activated and can now log in"
+                : "has been reactivated";
+
+            ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) {outcome}.", isError: false);
+            RefreshAllData();
+        }
+
+        private void UnlockButton_Click(object sender, RoutedEventArgs e) // Clear a lockout after too many failed logins (REQ-21)
+        {
+            UserMessage.Clear(AccountActionStatusText);
+
+            if (AccountsListView.SelectedItem is not AccountRow selectedAccount)
+            {
+                ShowAccountActionStatus(UserMessage.NothingSelected("account"), isError: true);
+                return;
+            }
+
+            if (selectedAccount.Status != "Locked") // Only a Locked account needs clearing
+            {
+                ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) is not locked - the account is {selectedAccount.Status}.", isError: true);
+                return;
+            }
+
+            try
+            {
+                using var db = new DatabaseHelper(App.ConnectionString);
+
+                // Status and attempt count are reset together, so the account is not left one
+                // failed attempt away from locking again.
+                if (!db.UnlockAccount(selectedAccount.AccountId))
+                {
+                    ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) could not be unlocked.", isError: true);
+                    return;
+                }
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Unlock failed - database error: {ex.Message}");
+                UserMessage.Show(AccountActionStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                return;
+            }
+
+            ShowAccountActionStatus($"{selectedAccount.FullName} (ID {selectedAccount.AccountId}) has been unlocked.", isError: false);
+            RefreshAllData();
+        }
+
+        private void LoadMemberPicker() // Populates the Issue-Loan member picker with active (non-suspended) members only
+        {
             using var db = new DatabaseHelper(App.ConnectionString);
 
-            var loan = db.GetLoanById(loanId);
-            if (loan == null) // Check if the loan exists in the database
-            {
-                ShowStatus($"No loan found with ID {loanId}.", isError: true);
-                return;
-            }
+            var members = db.GetAllMembers()
+                .Where(row => string.Equals(row["AccountStatus"]?.ToString(), "Active", StringComparison.OrdinalIgnoreCase))
+                .Select(row => new PickerItem
+                {
+                    Id = Convert.ToInt32(row["AccountID"]),
+                    Display = $"{row["AccountID"]} - {row["FirstName"]} {row["LastName"]} ({row["Username"]})"
+                })
+                .ToList();
 
-            if (loan["ReturnDate"] != DBNull.Value) // Check if the loan has already been returned
-            {
-                ShowStatus($"Loan #{loanId} has already been returned.", isError: true);
-                return;
-            }
+            MemberComboBox.ItemsSource = members;
+        }
 
-            if (Convert.ToInt32(loan["MemberID"]) != memberId) // Check if the loan belongs to the specified member
-            {
-                ShowStatus($"Loan #{loanId} belongs to Member ID {loan["MemberID"]}, not {memberId}. Please check the IDs and try again.", isError: true);
-                return;
-            }
+        private void LoadBookPicker() // Populates the Issue-Loan book picker with Available books only
+        {
+            using var db = new DatabaseHelper(App.ConnectionString);
 
-            bool success = db.ProcessReturn(loanId, DateTime.Now.Date);
-            if (!success)
-            {
-                ShowStatus($"Loan #{loanId} could not be returned. It may already be returned or does not exist.", isError: true);
-                return;
-            }
+            var books = db.SearchCatalogue("") // empty search term matches the whole catalogue
+                .Where(row => string.Equals(row["Status"]?.ToString(), "Available", StringComparison.OrdinalIgnoreCase))
+                .Select(row => new PickerItem
+                {
+                    Id = Convert.ToInt32(row["BookID"]),
+                    Display = $"{row["BookID"]} - {row["Title"]}"
+                })
+                .ToList();
 
-            int bookId = Convert.ToInt32(loan["BookID"]); // Get the Book ID associated with the loan to update its status
-            string newStatus = db.HasActiveReservation(bookId) ? "Reserved" : "Available";
-            db.UpdateBookStatus(bookId, newStatus);
+            BookComboBox.ItemsSource = books;
+        }
 
-            ShowStatus($"Loan #{loanId} processed as returned.", isError: false);
-            RefreshAllData();
+        private void LoadLoanPicker() // Populates the Process-Return picker with every currently active loan system-wide
+        {
+            using var db = new DatabaseHelper(App.ConnectionString);
+
+            var loans = db.GetAllActiveLoans()
+                .Select(row => new PickerItem
+                {
+                    Id = Convert.ToInt32(row["LoanID"]),
+                    Display = $"#{row["LoanID"]} - {row["Title"]} ({row["MemberName"]}, due {row["DueDate"]})"
+                })
+                .ToList();
+
+            LoanComboBox.ItemsSource = loans;
+        }
+
+        private void LoadAccountsList() // Populates the Accounts tab with every account, any role or status, for suspend / activate / unlock management
+        {
+            using var db = new DatabaseHelper(App.ConnectionString);
+
+            var members = db.GetAllAccounts()
+                .Select(row => new AccountRow
+                {
+                    AccountId = Convert.ToInt32(row["AccountID"]),
+                    Role = row["Role"]?.ToString() ?? "",
+                    FullName = $"{row["FirstName"]} {row["LastName"]}",
+                    Username = row["Username"]?.ToString() ?? "",
+                    Email = row["Email"]?.ToString() ?? "",
+                    PhoneNumber = row["PhoneNumber"]?.ToString() ?? "",
+                    Status = row["AccountStatus"]?.ToString() ?? "",
+                    FailedAttempts = Convert.ToInt32(row["FailedLoginAttempts"])
+                })
+                .OrderBy(member => member.AccountId)
+                .ToList();
+
+            AccountsListView.ItemsSource = members;
         }
 
         private void LoadOverdueItems() // Load all overdue loans and display them in the list view
@@ -138,6 +356,19 @@ namespace LibraryQA.Views
                 .ToList();
 
             OverdueListView.ItemsSource = overdue;
+
+            // REQ-17: the same notice wording the member sees, summarised for staff. It clears
+            // itself once the items are returned, because they leave the overdue list.
+            string? notice = OverdueNotice.ForStaff(db.GetAllOverdueLoans());
+
+            if (notice == null)
+            {
+                UserMessage.Clear(OverdueNoticeText);
+            }
+            else
+            {
+                UserMessage.Show(OverdueNoticeText, MessageKind.Warning, notice);
+            }
         }
 
         private void LoadReservations() // Load all active reservations and display them in the list view
@@ -161,15 +392,28 @@ namespace LibraryQA.Views
 
         private void FulfilButton_Click(object sender, RoutedEventArgs e) // Marks a held reservation as collected: closes the reservation and issues the loan for the collecting member
         {
+            UserMessage.Clear(ReservationStatusText);
+
             if (!int.TryParse(ReservationIdBox.Text.Trim(), out int reservationId)) // Validate that the Reservation ID is numeric
             {
-                ShowReservationStatus("Please enter a valid numeric Reservation ID.", isError: true);
+                ShowReservationStatus(UserMessage.FieldMustBeANumber("Reservation ID"), isError: true);
                 return;
             }
 
-            using var db = new DatabaseHelper(App.ConnectionString);
+            int? loanId;
 
-            var loanId = db.FulfillReservation(reservationId, DateTime.Now.Date, LoanPeriodDays);
+            try
+            {
+                using var db = new DatabaseHelper(App.ConnectionString);
+                loanId = db.FulfillReservation(reservationId, DateTime.Now.Date, LoanPeriodDays);
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Fulfil reservation failed - database error: {ex.Message}");
+                UserMessage.Show(ReservationStatusText, MessageKind.Error, UserMessage.DatabaseUnavailable);
+                return;
+            }
+
             if (loanId == null) // Check if the reservation could be fulfilled
             {
                 ShowReservationStatus($"Reservation #{reservationId} could not be fulfilled. It may not exist, already be fulfilled, or the book may not yet be held for collection.", isError: true);
@@ -279,6 +523,9 @@ namespace LibraryQA.Views
             TotalOnLoanText.Text = $"Items currently on loan: {stats["TotalOnLoan"]}";
             TotalOverdueText.Text = $"Items overdue: {stats["TotalOverdue"]}";
             TotalReservationsText.Text = $"Active reservations: {stats["TotalReservations"]}";
+            TotalMembersText.Text = $"Total members: {stats["TotalMembers"]}";
+            TotalBooksText.Text = $"Total books: {stats["TotalBooks"]}";
+            AvailableBooksText.Text = $"Available books: {stats["AvailableBooks"]}";
 
             var mostBorrowed = db.GetMostBorrowedBooks()
                 .Select(row => new MostBorrowedItem // Map each row from the database to a MostBorrowedItem object
@@ -291,20 +538,41 @@ namespace LibraryQA.Views
             MostBorrowedListView.ItemsSource = mostBorrowed;
         }
 
-        private void ShowStatus(string message, bool isError) // Display a status message in the interface, with different formatting for errors and success messages
+        private void ShowStatus(string message, bool isError) // Issue / Return status line - formatting handled centrally by UserMessage (DEF-04)
         {
-            IssueReturnStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
-            IssueReturnStatusText.Foreground = isError
-                ? System.Windows.Media.Brushes.Red
-                : System.Windows.Media.Brushes.Green;
+            UserMessage.Show(IssueReturnStatusText, isError ? MessageKind.Warning : MessageKind.Success, message);
         }
 
-        private void ShowReservationStatus(string message, bool isError) // Display a status message for reservation fulfilment, with different formatting for errors and success messages
+        private void ShowAccountActionStatus(string message, bool isError) // Suspend / Activate / Unlock status line
         {
-            ReservationStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
-            ReservationStatusText.Foreground = isError
-                ? System.Windows.Media.Brushes.Red
-                : System.Windows.Media.Brushes.Green;
+            UserMessage.Show(AccountActionStatusText, isError ? MessageKind.Warning : MessageKind.Success, message);
+        }
+
+        private void ShowReservationStatus(string message, bool isError) // Reservation fulfilment status line
+        {
+            UserMessage.Show(ReservationStatusText, isError ? MessageKind.Warning : MessageKind.Success, message);
+        }
+
+        // Generic display item for the Member/Book/Loan pickers - WPF's ComboBox
+        // shows ToString() by default when no DisplayMemberPath is set, so this
+        // keeps the XAML simple while still carrying the real ID for lookups.
+        private class PickerItem
+        {
+            public int Id { get; set; }
+            public string Display { get; set; } = "";
+            public override string ToString() => Display;
+        }
+
+        private class AccountRow // Represents one account row for the Accounts management tab
+        {
+            public int AccountId { get; set; }
+            public string Role { get; set; } = "";
+            public string FullName { get; set; } = "";
+            public string Username { get; set; } = "";
+            public string Email { get; set; } = "";
+            public string PhoneNumber { get; set; } = "";
+            public string Status { get; set; } = "";
+            public int FailedAttempts { get; set; } // REQ-21: how close the account is to locking
         }
 
         private class OverdueItem // Represents an overdue loan item with relevant details for display in the staff interface

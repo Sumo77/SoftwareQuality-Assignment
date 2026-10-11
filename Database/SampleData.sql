@@ -1,6 +1,27 @@
 -- ============================================================================
 -- Library Management System - Sample Data
 -- ============================================================================
+-- DEF-05 fixes applied:
+--   * 'Gone Girl' (BookID 11) was marked 'Reserved' with no reservation record.
+--   * 'Becoming'  (BookID 24) was marked 'On Loan' with no active loan record.
+--     Both are now 'Available', which matches their loan and reservation rows (REQ-14).
+--
+--   * Loan dates were hardcoded to 2024, so every active loan read as years overdue and
+--     the stated intent of this file ("one overdue", "one active") no longer held. Dates
+--     are now relative to the current local date, so the data always means what it says.
+--     'localtime' is used deliberately: date('now') alone is UTC (see DEF-09).
+--
+-- Active loans after seeding (6 total, matching the 6 books marked 'On Loan'):
+--   LoanID 3  - Alice, BookID 7   due in 11 days   - not overdue
+--   LoanID 6  - Bob,   BookID 8   due 6 days ago   - overdue by 6
+--   LoanID 7  - Bob,   BookID 10  due in 9 days    - not overdue (Bob is at the 2-loan limit)
+--   LoanID 8  - Carol, BookID 17  due today        - BOUNDARY: not overdue
+--   LoanID 10 - David, BookID 19  due 4 days ago   - overdue by 4
+--   LoanID 11 - Emma,  BookID 14  due yesterday    - BOUNDARY: overdue by exactly 1
+--
+-- Loan insert order is unchanged, so LoanID 3 is still Alice's active loan on BookID 7,
+-- which TC-6 depends on.
+-- ============================================================================
 
 -- Member Accounts (5 members)
 INSERT INTO Accounts (Username, PasswordHash, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate) VALUES
@@ -31,9 +52,10 @@ INSERT INTO Books (ISBN, Title, Author, Publisher, PublicationYear, Genre, Statu
 ('978-0-553-29335-0', 'Foundation', 'Isaac Asimov', 'Bantam Spectra', 1951, 'Science Fiction', 'Available', 'First novel in the Foundation series.');
 
 -- Books - Mystery
+-- DEF-05: 'Gone Girl' was 'Reserved' with no matching reservation row - corrected to 'Available'.
 INSERT INTO Books (ISBN, Title, Author, Publisher, PublicationYear, Genre, Status, Description) VALUES
 ('978-0-14-303943-3', 'The Girl with the Dragon Tattoo', 'Stieg Larsson', 'Vintage Crime', 2005, 'Mystery', 'On Loan', 'A psychological thriller.'),
-('978-0-06-207348-3', 'Gone Girl', 'Gillian Flynn', 'Broadway Books', 2012, 'Mystery', 'Reserved', 'A psychological thriller about a woman who disappears.'),
+('978-0-06-207348-3', 'Gone Girl', 'Gillian Flynn', 'Broadway Books', 2012, 'Mystery', 'Available', 'A psychological thriller about a woman who disappears.'),
 ('978-0-316-01792-2', 'The Cuckoos Calling', 'Robert Galbraith', 'Mulholland Books', 2013, 'Mystery', 'Available', 'A crime fiction novel.');
 
 -- Books - Biography & History
@@ -56,9 +78,10 @@ INSERT INTO Books (ISBN, Title, Author, Publisher, PublicationYear, Genre, Statu
 ('978-0-14-243726-6', 'Wuthering Heights', 'Emily Bronte', 'Penguin Classics', 1847, 'Romance', 'Available', 'A tale of passion and revenge.');
 
 -- Books - Self-Help & Business
+-- DEF-05: 'Becoming' was 'On Loan' but its only loan was returned - corrected to 'Available'.
 INSERT INTO Books (ISBN, Title, Author, Publisher, PublicationYear, Genre, Status, Description) VALUES
 ('978-1-4516-2639-8', 'Atomic Habits', 'James Clear', 'Avery', 2018, 'Self-Help', 'Available', 'A practical guide to building good habits.'),
-('978-0-06-238329-6', 'Becoming', 'Michelle Obama', 'Crown', 2018, 'Biography', 'On Loan', 'Memoir of former First Lady.'),
+('978-0-06-238329-6', 'Becoming', 'Michelle Obama', 'Crown', 2018, 'Biography', 'Available', 'Memoir of former First Lady.'),
 ('978-1-59184-278-5', 'The Lean Startup', 'Eric Ries', 'Crown Business', 2011, 'Business', 'Available', 'A guide to building successful startups.');
 
 -- Books - Children & Young Adult
@@ -76,38 +99,39 @@ INSERT INTO Books (ISBN, Title, Author, Publisher, PublicationYear, Genre, Statu
 ('978-0-13-468599-1', 'Clean Code', 'Robert C. Martin', 'Prentice Hall', 2008, 'Technology', 'Available', 'A handbook of agile software craftsmanship.'),
 ('978-0-262-03384-8', 'Introduction to Algorithms', 'Thomas H. Cormen', 'MIT Press', 2009, 'Computer Science', 'Available', 'Comprehensive text on algorithms.');
 
--- Loans for Alice (Member ID = 1) - Has 1 active loan
+-- Loans for Alice (MemberID 1) - 1 active loan, not overdue
 INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, ReturnDate, ReturnCondition) VALUES
-(1, 1, '2024-10-15', '2024-10-29', '2024-10-25', 'Good'),
-(3, 1, '2024-10-30', '2024-11-13', '2024-11-12', 'Good'),
-(7, 1, '2024-12-04', '2024-12-18', NULL, NULL);
+(1, 1, date('now', 'localtime', '-70 days'), date('now', 'localtime', '-56 days'), date('now', 'localtime', '-60 days'), 'Good'),
+(3, 1, date('now', 'localtime', '-55 days'), date('now', 'localtime', '-41 days'), date('now', 'localtime', '-42 days'), 'Good'),
+(7, 1, date('now', 'localtime', '-3 days'), date('now', 'localtime', '+11 days'), NULL, NULL);
 
--- Loans for Bob (Member ID = 2) - Has 2 active loans (at limit), one OVERDUE
+-- Loans for Bob (MemberID 2) - 2 active loans (at the limit), one overdue by 6 days
 INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, ReturnDate, ReturnCondition) VALUES
-(2, 2, '2024-09-15', '2024-09-29', '2024-09-27', 'Good'),
-(6, 2, '2024-10-25', '2024-11-08', '2024-11-07', 'Good'),
-(8, 2, '2024-11-27', '2024-12-11', NULL, NULL),
-(10, 2, '2024-12-05', '2024-12-19', NULL, NULL);
+(2, 2, date('now', 'localtime', '-90 days'), date('now', 'localtime', '-76 days'), date('now', 'localtime', '-78 days'), 'Good'),
+(6, 2, date('now', 'localtime', '-50 days'), date('now', 'localtime', '-36 days'), date('now', 'localtime', '-37 days'), 'Good'),
+(8, 2, date('now', 'localtime', '-20 days'), date('now', 'localtime', '-6 days'), NULL, NULL),
+(10, 2, date('now', 'localtime', '-5 days'), date('now', 'localtime', '+9 days'), NULL, NULL);
 
--- Loans for Carol (Member ID = 3) - Has 1 active loan
+-- Loans for Carol (MemberID 3) - 1 active loan due TODAY (boundary case: must not be overdue)
 INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, ReturnDate, ReturnCondition) VALUES
-(17, 3, '2024-12-11', '2024-12-25', NULL, NULL);
+(17, 3, date('now', 'localtime', '-14 days'), date('now', 'localtime'), NULL, NULL);
 
--- Loans for David (Member ID = 4) - Has 1 OVERDUE loan
+-- Loans for David (MemberID 4) - 1 active loan overdue by 4 days, plus one returned late
 INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, ReturnDate, ReturnCondition) VALUES
-(15, 4, '2024-11-19', '2024-12-03', '2024-12-04', 'Good'),
-(19, 4, '2024-11-22', '2024-12-06', NULL, NULL);
+(15, 4, date('now', 'localtime', '-40 days'), date('now', 'localtime', '-26 days'), date('now', 'localtime', '-25 days'), 'Good'),
+(19, 4, date('now', 'localtime', '-18 days'), date('now', 'localtime', '-4 days'), NULL, NULL);
 
--- Loans for Emma (Member ID = 5) - New member, 1 active loan
+-- Loans for Emma (MemberID 5) - 1 active loan due YESTERDAY (boundary case: overdue by exactly 1)
 INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, ReturnDate, ReturnCondition) VALUES
-(14, 5, '2024-12-12', '2024-12-26', NULL, NULL);
+(14, 5, date('now', 'localtime', '-15 days'), date('now', 'localtime', '-1 days'), NULL, NULL);
 
--- Additional historical loan
+-- Additional historical loan (returned)
 INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, ReturnDate, ReturnCondition) VALUES
-(24, 1, '2024-10-01', '2024-10-15', '2024-10-16', 'Good');
+(24, 1, date('now', 'localtime', '-120 days'), date('now', 'localtime', '-106 days'), date('now', 'localtime', '-105 days'), 'Good');
 
--- Active Reservations
+-- Reservations
+-- Two active reservations, both on books currently 'On Loan' (REQ-3), plus one already fulfilled.
 INSERT INTO Reservations (BookID, MemberID, ReservationDate, FulfilledDate, NotifiedDate) VALUES
-(7, 3, '2024-12-09', NULL, NULL),
-(17, 4, '2024-12-12', NULL, NULL),
-(3, 1, '2024-10-25', '2024-10-30', '2024-10-30');
+(7, 3, date('now', 'localtime', '-2 days'), NULL, NULL),
+(17, 4, date('now', 'localtime', '-1 days'), NULL, NULL),
+(3, 1, date('now', 'localtime', '-48 days'), date('now', 'localtime', '-42 days'), date('now', 'localtime', '-42 days'));

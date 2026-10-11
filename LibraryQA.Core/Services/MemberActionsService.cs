@@ -1,6 +1,6 @@
-﻿using System;
-using System.Linq;
 using LibraryQA.Core.Database;
+using System;
+using System.Linq;
 
 namespace LibraryQA.Core.Services
 {
@@ -22,6 +22,22 @@ namespace LibraryQA.Core.Services
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
+                var account = db.GetAccountInfo(memberId);
+
+                if (account == null)
+                {
+                    return new BorrowResult { Success = false, Message = $"No member found with ID {memberId}." };
+                }
+
+                if (!string.Equals(account["Role"]?.ToString(), "Member", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new BorrowResult { Success = false, Message = $"Account {memberId} is not a Member account and cannot borrow items." };
+                }
+                if (string.Equals(account["AccountStatus"]?.ToString(), "Suspended", StringComparison.OrdinalIgnoreCase))
+                {
+                    return new BorrowResult { Success = false, Message = $"Account {memberId} is suspended and cannot borrow items." };
+                }
+
                 var book = db.GetBookById(bookId);
 
                 if (book == null) // Check if book exists
@@ -43,15 +59,22 @@ namespace LibraryQA.Core.Services
                 DateTime loanDate = DateTime.Today;
                 DateTime dueDate = loanDate.AddDays(LoanPeriodDays);
 
-                // REQ-18: the loan request is held as "Pending" until a staff member approves or rejects it
-                int? loanId = db.CreateLoanRequest(bookId, memberId, loanDate, dueDate);
+// REQ-18: the loan request is held as "Pending" until a staff member approves or rejects it
+int? loanId = db.CreateLoanRequest(bookId, memberId, loanDate, dueDate);
 
                 if (loanId == null) // Check book loan request was successful
                 {
                     return new BorrowResult { Success = false, Message = "Unable to complete the loan request. Please try again." };
                 }
 
-                return new BorrowResult { Success = true, Message = "Your request to borrow " + book["Title"] + " has been submitted and is pending staff approval.", DueDate = dueDate };
+return new BorrowResult
+{
+    Success = true,
+    Message = "Your request to borrow " + book["Title"] + " has been submitted and is pending staff approval.",
+    DueDate = dueDate,
+    LoanId = loanId,
+    BookTitle = book["Title"]?.ToString()
+};
             }
         }
 

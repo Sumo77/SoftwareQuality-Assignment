@@ -16,6 +16,9 @@ namespace LibraryQA.Views
         // MainWindow connects to this to know when to swap to Member/Staff view
         public event EventHandler<UserRole>? LoginSucceeded;
 
+        // MainWindow listens to this to swap in the registration screen (REQ-16).
+        public event EventHandler? RegisterRequested;
+
         private readonly AuthenticationService _authService;
 
         public LoginView()
@@ -27,21 +30,21 @@ namespace LibraryQA.Views
 
         private void LoginButton_Click(object sender, RoutedEventArgs e)
         {
-            ClearError(); // Prevents stale errors from previous attempts
+            UserMessage.Clear(ErrorText); // Prevents stale errors from previous attempts
 
             string username = UsernameBox.Text.Trim(); // Retrieve user input (from username and password boxes)
             string password = PasswordBox.Password;
 
             if (string.IsNullOrWhiteSpace(username)) // Check username for blank input
             {
-                ShowError("Please enter a username.");
+                UserMessage.Show(ErrorText, MessageKind.Warning, UserMessage.FieldIsRequired("username"));
                 UsernameBox.Focus(); // Focuses on the username box for user convenience
                 return;
             }
 
             if (string.IsNullOrWhiteSpace(password)) // Check password for blank input
             {
-                ShowError("Please enter a password.");
+                UserMessage.Show(ErrorText, MessageKind.Warning, UserMessage.FieldIsRequired("password"));
                 PasswordBox.Focus(); // Focuses on the password box for user convenience
                 return;
             }
@@ -55,13 +58,13 @@ namespace LibraryQA.Views
             catch (SqliteException ex)
             {
                 Debug.WriteLine($"Login failed - database error: {ex.Message}");
-                ShowError("Could not reach the library database. Please try again.");
+                UserMessage.Show(ErrorText, MessageKind.Error, UserMessage.DatabaseUnavailable);
                 return;
             }
 
             if (role == null)
             {
-                ShowError("Invalid username or password.");
+                UserMessage.Show(ErrorText, MessageKind.Error, RefusalMessage(username, password));
                 PasswordBox.Clear(); // Remove invalid input from password box for user convenience
                 return;
             }
@@ -69,16 +72,23 @@ namespace LibraryQA.Views
             LoginSucceeded?.Invoke(this, role.Value);
         }
 
-        private void ShowError(string message) // Display error for user feedback
+        private void RegisterButton_Click(object sender, RoutedEventArgs e) // REQ-16: open the registration screen
         {
-            ErrorText.Text = $"⚠ {message}";
-            ErrorText.Visibility = Visibility.Visible;
+            RegisterRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        private void ClearError() // Prevent stale errors by 'cleaning the slate'
+        // Explains a refused login, but only once the password has been verified, so the screen
+        // cannot be used to discover which usernames exist (REQ-11, DEF-20). A wrong password and
+        // an unknown username both fall through to the same generic message.
+        private string RefusalMessage(string username, string password)
         {
-            ErrorText.Text = string.Empty;
-            ErrorText.Visibility = Visibility.Collapsed;
+            return _authService.GetStatusWithValidCredentials(username, password) switch
+            {
+                "Pending" => UserMessage.AccountPending,     // REQ-16: not yet activated by staff
+                "Suspended" => UserMessage.AccountSuspended, // REQ-19
+                "Locked" => UserMessage.AccountLocked,       // REQ-21
+                _ => UserMessage.InvalidCredentialsWithLockoutWarning, // REQ-11, REQ-21: wrong password or unknown username
+            };
         }
 
     }

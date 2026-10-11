@@ -10,7 +10,7 @@ namespace LibraryQA.Tests
 {
     [TestClass]
     // REQ-18 (Loan and Reservation Approval) and REQ-20 (Reservation Expiry) tests.
-    // Numbering continues from TC-39 (the last test added prior to this feature).
+    // Numbering continues from TC-54 (the last test added prior to this feature).
     public class ApprovalAndExpiryTests
     {
         private string _dbPath = string.Empty;
@@ -42,7 +42,7 @@ namespace LibraryQA.Tests
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
         }
 
-        // TC-40: A loan request is held as "Pending" and is not yet active (REQ-18 AC1)
+        // TC-55: A loan request is held as "Pending" and is not yet active (REQ-18 AC1)
         [TestMethod]
         public void BorrowBook_NewRequest_IsHeldPendingNotActive()
         {
@@ -58,7 +58,7 @@ namespace LibraryQA.Tests
             Assert.IsFalse(active.Exists(l => Convert.ToInt32(l["BookID"]) == 2));
         }
 
-        // TC-41: A reservation request is held as "Pending" and is not yet active (REQ-18 AC1)
+        // TC-56: A reservation request is held as "Pending" and is not yet active (REQ-18 AC1)
         [TestMethod]
         public void ReserveBook_NewRequest_IsHeldPendingNotActive()
         {
@@ -73,7 +73,7 @@ namespace LibraryQA.Tests
             Assert.IsTrue(pending.Exists(r => Convert.ToInt32(r["BookID"]) == 8 && Convert.ToInt32(r["MemberID"]) == 5));
         }
 
-        // TC-42: Approving a pending loan request activates it and updates the book's status (REQ-18 AC2)
+        // TC-57: Approving a pending loan request activates it and updates the book's status (REQ-18 AC2)
         [TestMethod]
         public void ApproveLoan_PendingLoan_BecomesActiveAndBookStatusUpdates()
         {
@@ -89,7 +89,7 @@ namespace LibraryQA.Tests
             Assert.IsTrue(db.GetActiveLoans(memberId: 5).Exists(l => Convert.ToInt32(l["LoanID"]) == loanId));
         }
 
-        // TC-43: Approving a pending reservation activates it (REQ-18 AC2)
+        // TC-58: Approving a pending reservation activates it (REQ-18 AC2)
         [TestMethod]
         public void ApproveReservation_PendingReservation_BecomesActive()
         {
@@ -105,7 +105,7 @@ namespace LibraryQA.Tests
             Assert.IsTrue(activeReservations.Exists(r => Convert.ToInt32(r["ReservationID"]) == reservationId && r["Status"]!.ToString() == "Active"));
         }
 
-        // TC-44: Rejecting a pending loan request closes it without changing the book's status, and the
+        // TC-59: Rejecting a pending loan request closes it without changing the book's status, and the
         // member is informed of the rejection (REQ-18 AC3)
         [TestMethod]
         public void RejectLoan_PendingLoan_ClosesRequestAndInformsMember()
@@ -124,7 +124,7 @@ namespace LibraryQA.Tests
             Assert.IsTrue(notices.Exists(n => n["RequestType"]!.ToString() == "Loan"));
         }
 
-        // TC-45: Rejecting a pending reservation closes it without changing the book's status (REQ-18 AC3)
+        // TC-60: Rejecting a pending reservation closes it without changing the book's status (REQ-18 AC3)
         [TestMethod]
         public void RejectReservation_PendingReservation_ClosesRequestWithoutChangingBookStatus()
         {
@@ -140,7 +140,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual(statusBefore, db.GetBookById(8)!["Status"].ToString());
         }
 
-        // TC-46: A member with 2 active-or-pending items is rejected when requesting a third, with a
+        // TC-61: A member with 2 active-or-pending items is rejected when requesting a third, with a
         // message stating the limit has been reached (REQ-18 AC4)
         [TestMethod]
         public void BorrowBook_MemberWithTwoActiveOrPendingItems_RejectsThirdRequest()
@@ -153,7 +153,7 @@ namespace LibraryQA.Tests
             StringAssert.Contains(thirdRequest.Message, "limit has been reached");
         }
 
-        // TC-47: Once a pending request is rejected by staff, that item no longer counts towards the
+        // TC-62: Once a pending request is rejected by staff, that item no longer counts towards the
         // member's limit (REQ-18 AC5)
         [TestMethod]
         public void RejectLoan_FreesUpMembersRequestLimit()
@@ -168,7 +168,7 @@ namespace LibraryQA.Tests
             Assert.IsTrue(newRequest.Success);
         }
 
-        // TC-48: A reserved item not collected within 5 days of becoming available is cancelled and the
+        // TC-63: A reserved item not collected within 5 days of becoming available is cancelled and the
         // item's status returns to "Available" (REQ-20 AC1)
         [TestMethod]
         public void ExpireReservations_UncollectedAfterFiveDays_CancelsReservationAndFreesBook()
@@ -185,7 +185,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual("Available", db.GetBookById(17)!["Status"].ToString());
         }
 
-        // TC-49: A reservation collected within the 5-day window is fulfilled and does not expire (REQ-20 AC2)
+        // TC-64: A reservation collected within the 5-day window is fulfilled and does not expire (REQ-20 AC2)
         [TestMethod]
         public void ExpireReservations_CollectedWithinWindow_DoesNotExpire()
         {
@@ -203,7 +203,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual("On Loan", db.GetBookById(17)!["Status"].ToString());
         }
 
-        // TC-50: Once a reservation expires, it no longer appears in the member's active reservations (REQ-20 AC3)
+        // TC-65: Once a reservation expires, it no longer appears in the member's active reservations (REQ-20 AC3)
         [TestMethod]
         public void ExpireReservations_AfterExpiry_NoLongerAppearsInMembersActiveReservations()
         {

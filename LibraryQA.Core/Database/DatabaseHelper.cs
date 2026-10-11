@@ -1,3 +1,4 @@
+using LibraryQA.Core.Services;
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
@@ -100,6 +101,82 @@ namespace LibraryQA.Core.Database
             }
         }
 
+        public string? GetAccountStatus(int accountId) // Retrieves the current AccountStatus ("Active" or "Suspended") for REQ-19/REQ-21
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "SELECT AccountStatus FROM Accounts WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@accountId", accountId);
+
+                var result = command.ExecuteScalar();
+                return result?.ToString();
+            }
+        }
+
+        // The four states an account can be in. Kept here as the one list the schema's CHECK
+        // constraint must agree with (REQ-16 Pending, REQ-19 Suspended, REQ-21 Locked).
+        public static readonly string[] AccountStatuses = { "Active", "Pending", "Suspended", "Locked" };
+
+        public bool SetAccountStatus(int accountId, string status) // Sets an account's status (REQ-16 activation, REQ-19 suspend/reactivate, REQ-21 lockout)
+        {
+            if (Array.IndexOf(AccountStatuses, status) < 0)
+            {
+                throw new ArgumentException($"Invalid status. Must be one of: {string.Join(", ", AccountStatuses)}.");
+            }
+
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "UPDATE Accounts SET AccountStatus = @status WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@status", status);
+                command.Parameters.AddWithValue("@accountId", accountId);
+
+                int rowsAffected = command.ExecuteNonQuery();
+                return rowsAffected > 0;
+            }
+        }
+
+        public int GetFailedLoginAttempts(int accountId) // Groundwork for REQ-21 (Login Lockout) - reads the current failed-attempt count
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "SELECT FailedLoginAttempts FROM Accounts WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@accountId", accountId);
+
+                var result = command.ExecuteScalar();
+                return result != null ? Convert.ToInt32(result) : 0;
+            }
+        }
+
+        public void IncrementFailedLoginAttempts(int accountId) // Groundwork for REQ-21 - call after a failed login attempt
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "UPDATE Accounts SET FailedLoginAttempts = FailedLoginAttempts + 1 WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@accountId", accountId);
+                command.ExecuteNonQuery();
+            }
+        }
+
+        public void ResetFailedLoginAttempts(int accountId) // Groundwork for REQ-21 - call after a successful login
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "UPDATE Accounts SET FailedLoginAttempts = 0 WHERE AccountID = @accountId";
+                command.Parameters.AddWithValue("@accountId", accountId);
+                command.ExecuteNonQuery();
+            }
+        }
+
         public Dictionary<string, object>? GetAccountInfo(int accountId) // Retrieves full account information for a given account ID
         {
             OpenConnection();
@@ -107,7 +184,7 @@ namespace LibraryQA.Core.Database
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT AccountID, Username, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate
+                    SELECT AccountID, Username, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate, AccountStatus
                     FROM Accounts 
                     WHERE AccountID = @accountId AND IsActive = 1";
 
@@ -126,13 +203,166 @@ namespace LibraryQA.Core.Database
                             ["LastName"] = reader["LastName"],
                             ["Email"] = reader["Email"] ?? "",
                             ["PhoneNumber"] = reader["PhoneNumber"] ?? "",
-                            ["CreatedDate"] = reader["CreatedDate"]
+                            ["CreatedDate"] = reader["CreatedDate"],
+                            ["AccountStatus"] = reader["AccountStatus"]
                         };
                     }
                 }
             }
 
             return null;
+        }
+
+        public List<Dictionary<string, object>> GetAllMembers() // Gets all member accounts (any status), for staff selection lists and member management (REQ-19, "pick from a list" improvement)
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT AccountID, Username, FirstName, LastName, Email, PhoneNumber, AccountStatus, FailedLoginAttempts
+                    FROM Accounts
+                    WHERE Role = 'Member' AND IsActive = 1
+                    ORDER BY LastName, FirstName";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["AccountID"] = reader["AccountID"],
+                            ["Username"] = reader["Username"],
+                            ["FirstName"] = reader["FirstName"],
+                            ["LastName"] = reader["LastName"],
+                            ["Email"] = reader["Email"] ?? "Not Provided",
+                            ["PhoneNumber"] = reader["PhoneNumber"] ?? "Not Provided",
+                            ["AccountStatus"] = reader["AccountStatus"],
+                            ["FailedLoginAttempts"] = reader["FailedLoginAttempts"]
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        // REQ-19/REQ-21: every account, staff included, for the management tab. Staff accounts lock
+        // like any other, so they have to be visible here or a locked staff account is unrecoverable.
+        public List<Dictionary<string, object>> GetAllAccounts()
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT AccountID, Username, FirstName, LastName, Role, Email, PhoneNumber, AccountStatus, FailedLoginAttempts
+                    FROM Accounts
+                    WHERE IsActive = 1
+                    ORDER BY AccountID";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["AccountID"] = reader["AccountID"],
+                            ["Username"] = reader["Username"],
+                            ["FirstName"] = reader["FirstName"],
+                            ["LastName"] = reader["LastName"],
+                            ["Role"] = reader["Role"],
+                            ["Email"] = reader["Email"] ?? "",
+                            ["PhoneNumber"] = reader["PhoneNumber"] ?? "",
+                            ["AccountStatus"] = reader["AccountStatus"],
+                            ["FailedLoginAttempts"] = reader["FailedLoginAttempts"]
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        // REQ-16: lets a screen check a username before the whole form is filled in. This is
+        // advisory only - CreateAccount re-checks inside its transaction, so a username taken
+        // between the two calls is still rejected.
+        public bool UsernameExists(string username)
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "SELECT COUNT(*) FROM Accounts WHERE Username = @username";
+                command.Parameters.AddWithValue("@username", username);
+
+                return Convert.ToInt32(command.ExecuteScalar()) > 0;
+            }
+        }
+
+        // REQ-16: registers a new account. Returns null if the username is already taken, so the
+        // uniqueness rule is enforced by the database rather than by a check the caller might skip.
+        public int? CreateAccount(string username, string passwordHash, string role, string firstName,
+            string lastName, string? email, string? phoneNumber, string accountStatus)
+        {
+            if (role != "Member" && role != "Staff")
+            {
+                throw new ArgumentException("Invalid role. Must be 'Member' or 'Staff'.");
+            }
+
+            if (Array.IndexOf(AccountStatuses, accountStatus) < 0)
+            {
+                throw new ArgumentException($"Invalid status. Must be one of: {string.Join(", ", AccountStatuses)}.");
+            }
+
+            OpenConnection();
+
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                using (var existsCommand = _connection.CreateCommand())
+                {
+                    existsCommand.Transaction = transaction;
+                    existsCommand.CommandText = "SELECT COUNT(*) FROM Accounts WHERE Username = @username";
+                    existsCommand.Parameters.AddWithValue("@username", username);
+
+                    if (Convert.ToInt32(existsCommand.ExecuteScalar()) > 0)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+                }
+
+                using (var insertCommand = _connection.CreateCommand())
+                {
+                    insertCommand.Transaction = transaction;
+                    insertCommand.CommandText = @"
+                        INSERT INTO Accounts (Username, PasswordHash, Role, FirstName, LastName, Email, PhoneNumber, AccountStatus)
+                        VALUES (@username, @passwordHash, @role, @firstName, @lastName, @email, @phoneNumber, @accountStatus);
+                        SELECT last_insert_rowid();";
+
+                    insertCommand.Parameters.AddWithValue("@username", username);
+                    insertCommand.Parameters.AddWithValue("@passwordHash", passwordHash);
+                    insertCommand.Parameters.AddWithValue("@role", role);
+                    insertCommand.Parameters.AddWithValue("@firstName", firstName);
+                    insertCommand.Parameters.AddWithValue("@lastName", lastName);
+                    insertCommand.Parameters.AddWithValue("@email", (object?)email ?? DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@phoneNumber", (object?)phoneNumber ?? DBNull.Value);
+                    insertCommand.Parameters.AddWithValue("@accountStatus", accountStatus);
+
+                    var result = insertCommand.ExecuteScalar();
+
+                    if (result == null)
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+
+                    transaction.Commit();
+                    return Convert.ToInt32(result);
+                }
+            }
         }
 
         #endregion
@@ -299,17 +529,20 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public List<Dictionary<string, object>> GetActiveLoans(int memberId) // Gets all active loans for a specific member, including overdue status and days overdue
+        // DEF-09: the caller supplies today's local date. SQLite's date('now') is UTC, which in
+        // New Zealand is up to a day behind, so loans could stay unflagged on the day they fell due.
+        // Overdue status and the day count both come from OverdueRules, so the member and staff
+        // views can never disagree (REQ-4, REQ-13).
+        public List<Dictionary<string, object>> GetActiveLoans(int memberId, DateTime? today = null) // Gets all active loans for a specific member, including overdue status and days overdue
         {
             OpenConnection();
+            DateTime asAt = (today ?? DateTime.Today).Date;
             var results = new List<Dictionary<string, object>>();
 
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT L.LoanID, L.BookID, B.Title, B.Author, L.LoanDate, L.DueDate,
-                           CASE WHEN date('now') > date(L.DueDate) THEN 1 ELSE 0 END as IsOverdue,
-                           julianday('now') - julianday(L.DueDate) as DaysOverdue
+                    SELECT L.LoanID, L.BookID, B.Title, B.Author, L.LoanDate, L.DueDate
                     FROM Loans L
                     JOIN Books B ON L.BookID = B.BookID
                     WHERE L.MemberID = @memberId AND L.ReturnDate IS NULL AND L.Status = 'Active'
@@ -321,6 +554,8 @@ namespace LibraryQA.Core.Database
                 {
                     while (reader.Read())
                     {
+                        DateTime dueDate = ReadDate(reader["DueDate"]);
+
                         results.Add(new Dictionary<string, object>
                         {
                             ["LoanID"] = reader["LoanID"],
@@ -329,8 +564,8 @@ namespace LibraryQA.Core.Database
                             ["Author"] = reader["Author"],
                             ["LoanDate"] = reader["LoanDate"],
                             ["DueDate"] = reader["DueDate"],
-                            ["IsOverdue"] = Convert.ToInt32(reader["IsOverdue"]) == 1,
-                            ["DaysOverdue"] = Math.Max(0, Convert.ToInt32(reader["DaysOverdue"]))
+                            ["IsOverdue"] = OverdueRules.IsOverdue(dueDate, asAt),
+                            ["DaysOverdue"] = OverdueRules.DaysOverdue(dueDate, asAt)
                         });
                     }
                 }
@@ -716,20 +951,21 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT L.LoanID, L.BookID, B.Title, B.Author, 
                            L.MemberID, A.FirstName, A.LastName, A.Email,
-                           L.LoanDate, L.DueDate,
-                           CAST(julianday(@today) - julianday(L.DueDate) AS INTEGER) as DaysOverdue
-                    FROM Loans L
-                    JOIN Books B ON L.BookID = B.BookID
-                    JOIN Accounts A ON L.MemberID = A.AccountID
-                    WHERE L.ReturnDate IS NULL AND L.Status = 'Active' AND date(@today) > date(L.DueDate)
-                    ORDER BY L.DueDate";
+           L.LoanDate, L.DueDate
+    FROM Loans L
+    JOIN Books B ON L.BookID = B.BookID
+    JOIN Accounts A ON L.MemberID = A.AccountID
+    WHERE L.ReturnDate IS NULL AND L.Status = 'Active' AND date(@today) > date(L.DueDate)
+    ORDER BY L.DueDate";
 
-                command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
 
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
+                        DateTime dueDate = ReadDate(reader["DueDate"]);
+
                         results.Add(new Dictionary<string, object>
                         {
                             ["LoanID"] = reader["LoanID"],
@@ -743,7 +979,42 @@ namespace LibraryQA.Core.Database
                             ["Email"] = reader["Email"] ?? "",
                             ["LoanDate"] = reader["LoanDate"],
                             ["DueDate"] = reader["DueDate"],
-                            ["DaysOverdue"] = reader["DaysOverdue"]
+                            ["DaysOverdue"] = OverdueRules.DaysOverdue(dueDate, asAt)
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        public List<Dictionary<string, object>> GetAllActiveLoans() // Gets all currently active (unreturned) loans system-wide, for staff selection when processing a return (the "pick from a list" improvement)
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT L.LoanID, L.BookID, B.Title, L.MemberID, A.FirstName, A.LastName, L.DueDate
+                    FROM Loans L
+                    JOIN Books B ON L.BookID = B.BookID
+                    JOIN Accounts A ON L.MemberID = A.AccountID
+                    WHERE L.ReturnDate IS NULL
+                    ORDER BY L.DueDate";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["LoanID"] = reader["LoanID"],
+                            ["BookID"] = reader["BookID"],
+                            ["Title"] = reader["Title"],
+                            ["MemberID"] = reader["MemberID"],
+                            ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
+                            ["DueDate"] = reader["DueDate"]
                         });
                     }
                 }
@@ -1266,19 +1537,23 @@ namespace LibraryQA.Core.Database
 
 
         /// Gets statistics for staff dashboard/reporting.
-        public Dictionary<string, int> GetStaffStatistics()
+        public Dictionary<string, int> GetStaffStatistics(DateTime? today = null)
         {
             OpenConnection();
+            DateTime asAt = (today ?? DateTime.Today).Date;
             var stats = new Dictionary<string, int>();
 
             using (var command = _connection!.CreateCommand())
             {
+                // DEF-09: the overdue count uses the same local date as the loan lists.
+                command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+
                 // Total items on loan
                 command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND Status = 'Active'";
                 stats["TotalOnLoan"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Overdue items
-                command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND Status = 'Active' AND date('now') > date(DueDate)";
+command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND Status = 'Active' AND date(@today) > date(DueDate)";
                 stats["TotalOverdue"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Active reservations
@@ -1339,7 +1614,33 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
+        // REQ-21: staff clear a lockout. The status and the attempt counter are reset in the same
+        // statement, so an unlocked account can never be left one failure away from locking again.
+        public bool UnlockAccount(int accountId)
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    UPDATE Accounts
+                    SET AccountStatus = 'Active', FailedLoginAttempts = 0
+                    WHERE AccountID = @accountId";
+
+                command.Parameters.AddWithValue("@accountId", accountId);
+
+                return command.ExecuteNonQuery() > 0;
+            }
+        }
+
         #endregion
+
+        // Dates are stored as yyyy-MM-dd text, so they are parsed with the invariant culture
+        // rather than whatever the machine is set to.
+        private static DateTime ReadDate(object value)
+        {
+            return DateTime.Parse(value.ToString()!, CultureInfo.InvariantCulture);
+        }
 
         #region IDisposable Implementation
 
