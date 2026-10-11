@@ -88,12 +88,12 @@ namespace LibraryQA.Tests
                     int memberId = Convert.ToInt32(staffRow["MemberID"]);
                     int loanId = Convert.ToInt32(staffRow["LoanID"]);
 
-                    var memberRow = db.GetActiveLoans(memberId, today)
+                    var AccountRow = db.GetActiveLoans(memberId, today)
                         .Single(l => Convert.ToInt32(l["LoanID"]) == loanId);
 
                     Assert.AreEqual(
                         Convert.ToInt32(staffRow["DaysOverdue"]),
-                        Convert.ToInt32(memberRow["DaysOverdue"]),
+                        Convert.ToInt32(AccountRow["DaysOverdue"]),
                         $"Loan {loanId} shows a different days-overdue count on the two screens.");
                 }
             }

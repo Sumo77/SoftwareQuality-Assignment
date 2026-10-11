@@ -39,7 +39,7 @@ CREATE TABLE Accounts (
 	PhoneNumber         TEXT,
 	CreatedDate         TEXT NOT NULL DEFAULT (datetime('now')),
 	IsActive            INTEGER NOT NULL DEFAULT 1 CHECK(IsActive IN (0, 1)),
-	AccountStatus       TEXT NOT NULL DEFAULT 'Active' CHECK(AccountStatus IN ('Active', 'Suspended')),
+		AccountStatus       TEXT NOT NULL DEFAULT 'Active' CHECK(AccountStatus IN ('Active', 'Pending', 'Suspended', 'Locked')),
 	FailedLoginAttempts INTEGER NOT NULL DEFAULT 0
 );
 

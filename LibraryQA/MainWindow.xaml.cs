@@ -23,9 +23,19 @@ namespace LibraryQA
         {
             var loginView = new LoginView();
             loginView.LoginSucceeded += LoginView_LoginSucceeded;
+            loginView.RegisterRequested += (_, _) => ShowRegister(); // REQ-16
 
             RootGrid.Children.Clear();
             RootGrid.Children.Add(loginView);
+        }
+
+        private void ShowRegister() // REQ-16: self-registration, returning to the login screen when done
+        {
+            var registerView = new RegisterView();
+            registerView.BackToLoginRequested += (_, _) => ShowLogin();
+
+            RootGrid.Children.Clear();
+            RootGrid.Children.Add(registerView);
         }
 
         private void LoginView_LoginSucceeded(object? sender, UserRole role)
