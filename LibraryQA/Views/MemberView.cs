@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using LibraryQA.Core.Database;
 using LibraryQA.Core.Services;
 using LibraryQA.Models;
+using Microsoft.Data.Sqlite;
 
 namespace LibraryQA.Views
 {
@@ -24,10 +26,21 @@ namespace LibraryQA.Views
 
         private void MemberView_Loaded(object sender, RoutedEventArgs e) // Load all member related data when the view is loaded
         {
+            // REQ-20: expire any reservations this member (or anyone) left uncollected for more than 5 days
+            try
+            {
+                new ReservationExpiryService(App.ConnectionString).ExpireOverdueReservations();
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Could not expire reservations - database error: {ex.Message}");
+            }
+
             LoadCatalogue();
             LoadMyLoans();
             LoadMyReservations();
             LoadLoanHistory();
+            LoadRejectionNotices();
         }
 
         private void LogoutButton_Click(object sender, RoutedEventArgs e) // Logout and return to the login interface
@@ -91,7 +104,7 @@ namespace LibraryQA.Views
             LoadCatalogue(SearchBox.Text.Trim()); // Refresh catalogue so status updates
         }
 
-        private void LoadMyLoans() // Load the member's active loans and display them in the list view
+        private void LoadMyLoans() // Load the member's active and pending loans and display them in the list view
         {
             using (var db = new DatabaseHelper(App.ConnectionString))
             {
@@ -107,7 +120,20 @@ namespace LibraryQA.Views
                     Status = (bool)l["IsOverdue"] ? "Overdue" : "On Loan"
                 }).ToList();
 
-                MyLoansListView.ItemsSource = loans;
+                // REQ-18: pending loan requests are shown too, so the member can see they are awaiting approval
+                var pendingLoans = db.GetPendingLoans()
+                    .Where(l => Convert.ToInt32(l["MemberID"]) == _memberId)
+                    .Select(l => new MyLoanDisplayModel
+                    {
+                        LoanID = Convert.ToInt32(l["LoanID"]),
+                        BookID = Convert.ToInt32(l["BookID"]),
+                        Title = l["Title"]?.ToString() ?? "",
+                        BorrowedOn = l["LoanDate"]?.ToString() ?? "",
+                        DueDate = l["DueDate"]?.ToString() ?? "",
+                        Status = "Pending"
+                    });
+
+                MyLoansListView.ItemsSource = loans.Concat(pendingLoans).ToList();
             }
         }
 
@@ -122,7 +148,8 @@ namespace LibraryQA.Views
                     ReservationID = Convert.ToInt32(r["ReservationID"]),
                     BookID = Convert.ToInt32(r["BookID"]),
                     Title = r["Title"]?.ToString() ?? "",
-                    ReservedOn = r["ReservationDate"]?.ToString() ?? ""
+                    ReservedOn = r["ReservationDate"]?.ToString() ?? "",
+                    Status = r["Status"]?.ToString() ?? ""
                 }).ToList();
 
                 MyReservationsListView.ItemsSource = reservations;
@@ -147,6 +174,30 @@ namespace LibraryQA.Views
                 }).ToList();
 
                 LoanHistoryListView.ItemsSource = history;
+            }
+        }
+
+        private void LoadRejectionNotices() // REQ-18: Informs the member when a loan or reservation request of theirs has been rejected
+        {
+            try
+            {
+                using (var db = new DatabaseHelper(App.ConnectionString))
+                {
+                    var rejected = db.GetRejectedNotices(_memberId);
+                    if (rejected.Count == 0)
+                    {
+                        return;
+                    }
+
+                    string summary = string.Join("; ", rejected.Select(r =>
+                        $"your {r["RequestType"]} request for '{r["Title"]}' was rejected"));
+
+                    UserMessage.Show(StatusText, MessageKind.Warning, $"Staff have reviewed your requests: {summary}.");
+                }
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Could not load rejection notices - database error: {ex.Message}");
             }
         }
 

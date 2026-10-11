@@ -64,6 +64,7 @@
 						<GridView>
 							<GridViewColumn Header="Title" Width="300" DisplayMemberBinding="{Binding Title}"/>
 							<GridViewColumn Header="Reserved On" Width="150" DisplayMemberBinding="{Binding ReservedOn}"/>
+							<GridViewColumn Header="Status" Width="100" DisplayMemberBinding="{Binding Status}"/>
 						</GridView>
 					</ListView.View>
 				</ListView>
@@ -83,5 +84,6 @@
 				</ListView>
 			</TabItem>
 		</TabControl>
+		<TextBlock x:Name="StatusText" DockPanel.Dock="Bottom" TextWrapping="Wrap" Margin="12,0,12,12" Visibility="Collapsed"/>
 	</DockPanel>
 </UserControl>
