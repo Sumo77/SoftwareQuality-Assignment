@@ -260,7 +260,7 @@ namespace LibraryQA.Tests
         [TestMethod]
         public void RemoveBook_OnLoan_RejectedAndBookRemains()
         {
-            int bookId = AddValidBook("Out On Loan");
+            int bookId = AddValidBook("Out On Loan"); 
 
             using (var db = new DatabaseHelper(_connectionString))
             {
