@@ -9,5 +9,6 @@
         public string BorrowedOn { get; set; } = string.Empty;
         public string DueDate { get; set; } = string.Empty;
         public string Status { get; set; } = string.Empty;
+        public int DaysOverdue { get; set; }
     }
 }

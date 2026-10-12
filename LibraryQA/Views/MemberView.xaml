@@ -57,6 +57,7 @@
 							<GridViewColumn Header="Borrowed On" Width="120" DisplayMemberBinding="{Binding BorrowedOn}"/>
 							<GridViewColumn Header="Due Date" Width="120" DisplayMemberBinding="{Binding DueDate}"/>
 							<GridViewColumn Header="Status" Width="100" DisplayMemberBinding="{Binding Status}"/>
+							<GridViewColumn Header="Days Overdue" Width="110" DisplayMemberBinding="{Binding DaysOverdue}"/>
 						</GridView>
 					</ListView.View>
 				</ListView>
