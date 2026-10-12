@@ -75,7 +75,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-54: Looking up an ID that does not exist fails with a clear message instead of an error (REQ-12)
+        // TC-79: Looking up an ID that does not exist fails with a clear message instead of an error (REQ-12)
         [TestMethod]
         public void LookUpMember_UnknownId_Fails()
         {
@@ -85,7 +85,7 @@ namespace LibraryQA.Tests
             StringAssert.Contains(result.Message, "No member found");
         }
 
-        // TC-55: A staff account cannot be looked up - the lookup only covers members (REQ-6, REQ-11)
+        // TC-80: A staff account cannot be looked up - the lookup only covers members (REQ-6, REQ-11)
         [TestMethod]
         public void LookUpMember_StaffAccount_Fails()
         {
@@ -94,7 +94,7 @@ namespace LibraryQA.Tests
             Assert.IsFalse(result.Success);
         }
 
-        // TC-56: A member's loan list holds only that member's loans, never another member's (REQ-6, REQ-5)
+        // TC-81: A member's loan list holds only that member's loans, never another member's (REQ-6, REQ-5)
         [TestMethod]
         public void LookUpMember_ReturnsOnlyThatMembersLoans()
         {
@@ -115,7 +115,7 @@ namespace LibraryQA.Tests
             Assert.HasCount(2, bobResult.ActiveLoans);
         }
 
-        // TC-57: Overdue items are split from current loans, with the day count from the shared overdue rule (REQ-4, DEF-09)
+        // TC-82: Overdue items are split from current loans, with the day count from the shared overdue rule (REQ-4, DEF-09)
         [TestMethod]
         public void LookUpMember_SplitsOverdueFromCurrentLoans()
         {
@@ -133,7 +133,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual(1, Convert.ToInt32(result.OverdueLoans[0]["DaysOverdue"])); // due yesterday = exactly one day overdue
         }
 
-        // TC-58: A loan due today is not overdue (boundary, REQ-4)
+        // TC-83: A loan due today is not overdue (boundary, REQ-4)
         [TestMethod]
         public void LookUpMember_LoanDueToday_IsNotOverdue()
         {
@@ -148,7 +148,7 @@ namespace LibraryQA.Tests
             Assert.IsEmpty(result.OverdueLoans);
         }
 
-        // TC-59: Contact details are returned only while the member has overdue items (REQ-6, REQ-11)
+        // TC-84: Contact details are returned only while the member has overdue items (REQ-6, REQ-11)
         [TestMethod]
         public void LookUpMember_ContactDetails_OnlyWhileOverdue()
         {
@@ -166,7 +166,7 @@ namespace LibraryQA.Tests
             Assert.IsFalse(string.IsNullOrEmpty(withOverdue.PhoneNumber));
         }
 
-        // TC-60: A member's active reservations appear in the lookup (REQ-6, REQ-3)
+        // TC-85: A member's active reservations appear in the lookup (REQ-6, REQ-3)
         [TestMethod]
         public void LookUpMember_ReturnsActiveReservations()
         {
@@ -188,7 +188,7 @@ namespace LibraryQA.Tests
             Assert.IsTrue(after.Any(reservation => reservation["Title"].ToString() == "Reserved Book"));
         }
 
-        // TC-61: The data staff can read about a member holds no password hash or login data (REQ-6, REQ-11)
+        // TC-86: The data staff can read about a member holds no password hash or login data (REQ-6, REQ-11)
         [TestMethod]
         public void GetMemberBasicInfo_DoesNotExposeSensitiveFields()
         {

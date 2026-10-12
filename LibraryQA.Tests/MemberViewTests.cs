@@ -99,7 +99,7 @@ namespace LibraryQA.Tests
         }
 
         // TC-12: Searching for a literal LIKE wildcard character ("%" or "_") does not match every
-        // book in the catalogue - it only matches titles/authors/ISBNs that actually contain it (REQ-4)
+        // book in the catalogue - it only matches titles/authors/ISBNs that actually contain it (REQ-1, REQ-9)
         [TestMethod]
         public void SearchCatalogue_WildcardCharacters_DoNotMatchEveryBook()
         {
