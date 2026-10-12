@@ -121,6 +121,10 @@
                 </StackPanel>
             </TabItem>
 
+            <TabItem Header="Member Lookup">
+                <local:MemberLookupView x:Name="MemberLookupTab"/>
+            </TabItem>
+
             <TabItem Header="Catalogue">
                 <local:CatalogueManagementView x:Name="CatalogueTab"/>
             </TabItem>
