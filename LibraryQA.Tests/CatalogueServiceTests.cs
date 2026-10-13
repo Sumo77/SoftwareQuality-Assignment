@@ -56,7 +56,7 @@ namespace LibraryQA.Tests
             return result.BookId!.Value;
         }
 
-        // TC-62: Adding a book with valid details saves it as Available, with the details trimmed (REQ-1, REQ-14)
+        // TC-66: Adding a book with valid details saves it as Available, with the details trimmed (REQ-1, REQ-14)
         [TestMethod]
         public void AddBook_ValidDetails_AddsAvailableBook()
         {
@@ -80,7 +80,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-63: A blank title is rejected with a message naming the Title field, and nothing is added (REQ-9, REQ-12)
+        // TC-67: A blank title is rejected with a message naming the Title field, and nothing is added (REQ-9, REQ-12)
         [TestMethod]
         public void AddBook_BlankTitle_RejectedNamingTheField()
         {
@@ -94,7 +94,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual(before, CountBooks());
         }
 
-        // TC-64: A blank author is rejected with a message naming the Author field (REQ-9)
+        // TC-68: A blank author is rejected with a message naming the Author field (REQ-9)
         [TestMethod]
         public void AddBook_BlankAuthor_RejectedNamingTheField()
         {
@@ -105,7 +105,7 @@ namespace LibraryQA.Tests
             StringAssert.Contains(result.Message, "author");
         }
 
-        // TC-65: A title over the length limit is rejected, while one exactly at the limit is accepted (boundary, REQ-9)
+        // TC-69: A title over the length limit is rejected, while one exactly at the limit is accepted (boundary, REQ-9)
         [TestMethod]
         public void AddBook_TitleLengthBoundary_RejectsOneOverTheLimit()
         {
@@ -117,7 +117,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual(CatalogueService.FieldTitle, overLimit.Field);
         }
 
-        // TC-66: A non-numeric publication year is rejected with a message naming that field (REQ-9)
+        // TC-70: A non-numeric publication year is rejected with a message naming that field (REQ-9)
         [TestMethod]
         public void AddBook_NonNumericYear_RejectedNamingTheField()
         {
@@ -128,7 +128,7 @@ namespace LibraryQA.Tests
             StringAssert.Contains(result.Message, "must be a number");
         }
 
-        // TC-67: A negative year is accepted, because the catalogue already holds The Odyssey as -800 (REQ-1)
+        // TC-71: A negative year is accepted, because the catalogue already holds The Odyssey as -800 (REQ-1)
         [TestMethod]
         public void AddBook_NegativeYear_IsAccepted()
         {
@@ -137,7 +137,7 @@ namespace LibraryQA.Tests
             Assert.IsTrue(result.Success, result.Message);
         }
 
-        // TC-68: A year beyond next year is rejected (REQ-9)
+        // TC-72: A year beyond next year is rejected (REQ-9)
         [TestMethod]
         public void AddBook_YearTooFarInTheFuture_Rejected()
         {
@@ -149,7 +149,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual(CatalogueService.FieldPublicationYear, result.Field);
         }
 
-        // TC-69: ISBNs of the wrong length or containing letters are rejected; a 10-digit ISBN ending in X is accepted (REQ-9)
+        // TC-73: ISBNs of the wrong length or containing letters are rejected; a 10-digit ISBN ending in X is accepted (REQ-9)
         [TestMethod]
         public void AddBook_IsbnFormat_RejectsBadValuesAndAcceptsValidOnes()
         {
@@ -164,7 +164,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual(CatalogueService.FieldIsbn, rejected.Field);
         }
 
-        // TC-70: An ISBN already in use is rejected with a clear message, even if typed with different hyphens (REQ-14)
+        // TC-74: An ISBN already in use is rejected with a clear message, even if typed with different hyphens (REQ-14)
         [TestMethod]
         public void AddBook_DuplicateIsbn_RejectedNamingTheExistingBook()
         {
@@ -179,7 +179,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual(before, CountBooks());
         }
 
-        // TC-71: Several books may have no ISBN - blank is stored as NULL, not as a repeated empty string (REQ-1)
+        // TC-75: Several books may have no ISBN - blank is stored as NULL, not as a repeated empty string (REQ-1)
         [TestMethod]
         public void AddBook_BlankIsbn_AllowsMoreThanOneBookWithoutAnIsbn()
         {
@@ -190,7 +190,7 @@ namespace LibraryQA.Tests
             Assert.IsTrue(second.Success, second.Message);
         }
 
-        // TC-72: Editing a book changes its details and keeps its status unchanged, even while it is on loan (REQ-1, REQ-14)
+        // TC-76: Editing a book changes its details and keeps its status unchanged, even while it is on loan (REQ-1, REQ-14)
         [TestMethod]
         public void UpdateBook_WhileOnLoan_ChangesDetailsButNotStatus()
         {
@@ -213,7 +213,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-73: A book may keep its own ISBN when edited, but cannot take another book's ISBN (REQ-14)
+        // TC-77: A book may keep its own ISBN when edited, but cannot take another book's ISBN (REQ-14)
         [TestMethod]
         public void UpdateBook_Isbn_AllowsOwnButRejectsAnotherBooks()
         {
@@ -228,7 +228,7 @@ namespace LibraryQA.Tests
             Assert.AreEqual(CatalogueService.FieldIsbn, takingOthers.Field);
         }
 
-        // TC-74: Editing a book that does not exist fails with a clear message instead of an error (REQ-12)
+        // TC-78: Editing a book that does not exist fails with a clear message instead of an error (REQ-12)
         [TestMethod]
         public void UpdateBook_UnknownBook_Rejected()
         {
@@ -238,7 +238,7 @@ namespace LibraryQA.Tests
             StringAssert.Contains(result.Message, "not found");
         }
 
-        // TC-75: A book that has never been loaned or reserved can be removed (REQ-1)
+        // TC-79: A book that has never been loaned or reserved can be removed (REQ-1)
         [TestMethod]
         public void RemoveBook_NeverLoaned_IsRemoved()
         {
@@ -256,7 +256,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-76: A book that is on loan cannot be removed, and its status is untouched (REQ-1, REQ-14)
+        // TC-80: A book that is on loan cannot be removed, and its status is untouched (REQ-1, REQ-14)
         [TestMethod]
         public void RemoveBook_OnLoan_RejectedAndBookRemains()
         {
@@ -280,7 +280,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-77: A book returned long ago still has loan history, so it cannot be removed even though it is Available (REQ-14)
+        // TC-81: A book returned long ago still has loan history, so it cannot be removed even though it is Available (REQ-14)
         [TestMethod]
         public void RemoveBook_WithLoanHistory_RejectedAndBookRemains()
         {
@@ -306,7 +306,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-78: Removing a book that does not exist fails with a clear message instead of an error (REQ-12)
+        // TC-82: Removing a book that does not exist fails with a clear message instead of an error (REQ-12)
         [TestMethod]
         public void RemoveBook_UnknownBook_Rejected()
         {
