@@ -95,6 +95,8 @@ CREATE TABLE Loans (
 	DueDate         TEXT NOT NULL,
 	ReturnDate      TEXT,
 	ReturnCondition TEXT,
+	Status          TEXT NOT NULL DEFAULT 'Active'
+					CHECK(Status IN ('Pending', 'Active', 'Rejected')),
 	FOREIGN KEY (BookID) REFERENCES Books(BookID) ON DELETE RESTRICT,
 	FOREIGN KEY (MemberID) REFERENCES Accounts(AccountID) ON DELETE RESTRICT
 );
@@ -127,15 +129,17 @@ CREATE TABLE Reservations (
 	ReservationDate TEXT NOT NULL,
 	FulfilledDate   TEXT,
 	NotifiedDate    TEXT,
+	Status          TEXT NOT NULL DEFAULT 'Active'
+					CHECK(Status IN ('Pending', 'Active', 'Fulfilled', 'Rejected', 'Expired')),
 	FOREIGN KEY (BookID) REFERENCES Books(BookID) ON DELETE RESTRICT,
 	FOREIGN KEY (MemberID) REFERENCES Accounts(AccountID) ON DELETE RESTRICT
 );
 
--- CRITICAL: Enforce single active reservation per book (REQ-3)
+-- CRITICAL: Enforce single active/pending reservation per book (REQ-3)
 -- This prevents double-booking and maintains data integrity (REQ-14)
 CREATE UNIQUE INDEX idx_reservations_active_book 
 	ON Reservations(BookID) 
-	WHERE FulfilledDate IS NULL;
+	WHERE FulfilledDate IS NULL AND Status IN ('Pending', 'Active');
 
 -- Index for finding reservations by member (REQ-5)
 CREATE INDEX idx_reservations_member ON Reservations(MemberID);

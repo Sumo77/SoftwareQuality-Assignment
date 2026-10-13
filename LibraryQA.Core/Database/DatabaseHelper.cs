@@ -520,7 +520,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT COUNT(*) 
                     FROM Loans 
-                    WHERE MemberID = @memberId AND ReturnDate IS NULL";
+                    WHERE MemberID = @memberId AND ReturnDate IS NULL AND Status = 'Active'";
 
                 command.Parameters.AddWithValue("@memberId", memberId);
 
@@ -545,7 +545,7 @@ namespace LibraryQA.Core.Database
                     SELECT L.LoanID, L.BookID, B.Title, B.Author, L.LoanDate, L.DueDate
                     FROM Loans L
                     JOIN Books B ON L.BookID = B.BookID
-                    WHERE L.MemberID = @memberId AND L.ReturnDate IS NULL
+                    WHERE L.MemberID = @memberId AND L.ReturnDate IS NULL AND L.Status = 'Active'
                     ORDER BY L.DueDate";
 
                 command.Parameters.AddWithValue("@memberId", memberId);
@@ -670,6 +670,155 @@ namespace LibraryQA.Core.Database
             }
         }
 
+        public int? CreateLoanRequest(int bookId, int memberId, DateTime loanDate, DateTime dueDate) // REQ-18: Creates a loan request held as "Pending" until a staff member approves or rejects it. Book status is not changed until approval.
+        {
+            OpenConnection();
+
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                using (var checkCommand = _connection.CreateCommand())
+                {
+                    checkCommand.Transaction = transaction;
+                    checkCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
+                    checkCommand.Parameters.AddWithValue("@bookId", bookId);
+
+                    var status = checkCommand.ExecuteScalar()?.ToString();
+                    if (status != "Available")
+                    {
+                        transaction.Rollback();
+                        return null;
+                    }
+                }
+
+                int? loanId;
+                using (var command = _connection.CreateCommand())
+                {
+                    command.Transaction = transaction;
+                    command.CommandText = @"
+                        INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, Status)
+                        VALUES (@bookId, @memberId, @loanDate, @dueDate, 'Pending');
+                        SELECT last_insert_rowid();";
+
+                    command.Parameters.AddWithValue("@bookId", bookId);
+                    command.Parameters.AddWithValue("@memberId", memberId);
+                    command.Parameters.AddWithValue("@loanDate", loanDate.ToString("yyyy-MM-dd"));
+                    command.Parameters.AddWithValue("@dueDate", dueDate.ToString("yyyy-MM-dd"));
+
+                    var result = command.ExecuteScalar();
+                    loanId = result != null ? Convert.ToInt32(result) : (int?)null;
+                }
+
+                if (loanId == null)
+                {
+                    transaction.Rollback();
+                    return null;
+                }
+
+                transaction.Commit();
+                return loanId;
+            }
+        }
+
+        public bool ApproveLoan(int loanId) // REQ-18: Approves a pending loan request, activating it and updating the book's status to "On Loan"
+        {
+            OpenConnection();
+
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                int bookId;
+                using (var lookupCommand = _connection.CreateCommand())
+                {
+                    lookupCommand.Transaction = transaction;
+                    lookupCommand.CommandText = "SELECT BookID FROM Loans WHERE LoanID = @loanId AND Status = 'Pending'";
+                    lookupCommand.Parameters.AddWithValue("@loanId", loanId);
+
+                    var result = lookupCommand.ExecuteScalar();
+                    if (result == null)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+
+                    bookId = Convert.ToInt32(result);
+                }
+
+                using (var updateLoanCommand = _connection.CreateCommand())
+                {
+                    updateLoanCommand.Transaction = transaction;
+                    updateLoanCommand.CommandText = "UPDATE Loans SET Status = 'Active' WHERE LoanID = @loanId AND Status = 'Pending'";
+                    updateLoanCommand.Parameters.AddWithValue("@loanId", loanId);
+
+                    if (updateLoanCommand.ExecuteNonQuery() == 0)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+
+                using (var updateBookCommand = _connection.CreateCommand())
+                {
+                    updateBookCommand.Transaction = transaction;
+                    updateBookCommand.CommandText = "UPDATE Books SET Status = 'On Loan' WHERE BookID = @bookId";
+                    updateBookCommand.Parameters.AddWithValue("@bookId", bookId);
+                    updateBookCommand.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+                return true;
+            }
+        }
+
+        public bool RejectLoan(int loanId) // REQ-18: Rejects a pending loan request, closing it without changing the item's status
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "UPDATE Loans SET Status = 'Rejected' WHERE LoanID = @loanId AND Status = 'Pending'";
+                command.Parameters.AddWithValue("@loanId", loanId);
+
+                return command.ExecuteNonQuery() > 0;
+            }
+        }
+
+        public List<Dictionary<string, object>> GetPendingLoans() // REQ-18: Gets all pending loan requests system-wide, for staff approval
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT L.LoanID, L.BookID, B.Title, B.Author,
+                           L.MemberID, A.FirstName, A.LastName, L.LoanDate, L.DueDate
+                    FROM Loans L
+                    JOIN Books B ON L.BookID = B.BookID
+                    JOIN Accounts A ON L.MemberID = A.AccountID
+                    WHERE L.Status = 'Pending'
+                    ORDER BY L.LoanDate";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["LoanID"] = reader["LoanID"],
+                            ["BookID"] = reader["BookID"],
+                            ["Title"] = reader["Title"],
+                            ["Author"] = reader["Author"],
+                            ["MemberID"] = reader["MemberID"],
+                            ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
+                            ["LoanDate"] = reader["LoanDate"],
+                            ["DueDate"] = reader["DueDate"]
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
         public Dictionary<string, object>? GetLoanById(int loanId) // Retrieves detailed information for a specific loan by its ID, including book and member details
         {
             OpenConnection();
@@ -718,7 +867,7 @@ namespace LibraryQA.Core.Database
                 using (var lookupCommand = _connection.CreateCommand())
                 {
                     lookupCommand.Transaction = transaction;
-                    lookupCommand.CommandText = "SELECT BookID FROM Loans WHERE LoanID = @loanId AND ReturnDate IS NULL";
+                    lookupCommand.CommandText = "SELECT BookID FROM Loans WHERE LoanID = @loanId AND ReturnDate IS NULL AND Status = 'Active'";
                     lookupCommand.Parameters.AddWithValue("@loanId", loanId);
 
                     var bookIdResult = lookupCommand.ExecuteScalar();
@@ -751,14 +900,17 @@ namespace LibraryQA.Core.Database
                     }
                 }
 
-                // Restore catalogue status: "reserved" if a pending reservation exists, otherwise "available"
+                // Restore catalogue status: "reserved" if an approved reservation exists, otherwise "available"
+                // REQ-20: NotifiedDate is stamped here - this is when the item becomes available to the reserver,
+                // and starts the 5-day collection window.
                 using (var reservationCheckCommand = _connection.CreateCommand())
                 {
                     reservationCheckCommand.Transaction = transaction;
-                    reservationCheckCommand.CommandText = "SELECT COUNT(*) FROM Reservations WHERE BookID = @bookId AND FulfilledDate IS NULL";
+                    reservationCheckCommand.CommandText = "SELECT ReservationID FROM Reservations WHERE BookID = @bookId AND FulfilledDate IS NULL AND Status = 'Active' ORDER BY ReservationDate LIMIT 1";
                     reservationCheckCommand.Parameters.AddWithValue("@bookId", bookId);
 
-                    bool hasReservation = Convert.ToInt32(reservationCheckCommand.ExecuteScalar()) > 0;
+                    var reservationIdResult = reservationCheckCommand.ExecuteScalar();
+                    bool hasReservation = reservationIdResult != null;
 
                     using (var updateCommand = _connection.CreateCommand())
                     {
@@ -767,6 +919,18 @@ namespace LibraryQA.Core.Database
                         updateCommand.Parameters.AddWithValue("@status", hasReservation ? "Reserved" : "Available");
                         updateCommand.Parameters.AddWithValue("@bookId", bookId);
                         updateCommand.ExecuteNonQuery();
+                    }
+
+                    if (hasReservation)
+                    {
+                        using (var notifyCommand = _connection.CreateCommand())
+                        {
+                            notifyCommand.Transaction = transaction;
+                            notifyCommand.CommandText = "UPDATE Reservations SET NotifiedDate = @notifiedDate WHERE ReservationID = @reservationId";
+                            notifyCommand.Parameters.AddWithValue("@notifiedDate", returnDate.ToString("yyyy-MM-dd"));
+                            notifyCommand.Parameters.AddWithValue("@reservationId", Convert.ToInt32(reservationIdResult));
+                            notifyCommand.ExecuteNonQuery();
+                        }
                     }
                 }
 
@@ -787,12 +951,12 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT L.LoanID, L.BookID, B.Title, B.Author, 
                            L.MemberID, A.FirstName, A.LastName, A.Email,
-                           L.LoanDate, L.DueDate
-                    FROM Loans L
-                    JOIN Books B ON L.BookID = B.BookID
-                    JOIN Accounts A ON L.MemberID = A.AccountID
-                    WHERE L.ReturnDate IS NULL AND date(@today) > date(L.DueDate)
-                    ORDER BY L.DueDate";
+           L.LoanDate, L.DueDate
+    FROM Loans L
+    JOIN Books B ON L.BookID = B.BookID
+    JOIN Accounts A ON L.MemberID = A.AccountID
+    WHERE L.ReturnDate IS NULL AND L.Status = 'Active' AND date(@today) > date(L.DueDate)
+    ORDER BY L.DueDate";
 
                 command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
 
@@ -872,7 +1036,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT COUNT(*) 
                     FROM Reservations 
-                    WHERE BookID = @bookId AND FulfilledDate IS NULL";
+                    WHERE BookID = @bookId AND FulfilledDate IS NULL AND Status IN ('Pending', 'Active')";
 
                 command.Parameters.AddWithValue("@bookId", bookId);
 
@@ -914,42 +1078,121 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public List<Dictionary<string, object>> GetActiveReservations(int memberId) // Gets all active reservations for a specific member, including book details and reservation date
+        public int? CreateReservationRequest(int bookId, int memberId, DateTime reservationDate) // REQ-18: Creates a reservation request held as "Pending" until a staff member approves or rejects it
+        {
+            if (HasActiveReservation(bookId))
+            {
+                return null;
+            }
+
+            OpenConnection();
+
+            try
+            {
+                using (var command = _connection!.CreateCommand())
+                {
+                    command.CommandText = @"
+                        INSERT INTO Reservations (BookID, MemberID, ReservationDate, Status)
+                        VALUES (@bookId, @memberId, @reservationDate, 'Pending');
+                        SELECT last_insert_rowid();";
+
+                    command.Parameters.AddWithValue("@bookId", bookId);
+                    command.Parameters.AddWithValue("@memberId", memberId);
+                    command.Parameters.AddWithValue("@reservationDate", reservationDate.ToString("yyyy-MM-dd"));
+
+                    var result = command.ExecuteScalar();
+                    return result != null ? Convert.ToInt32(result) : null;
+                }
+            }
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 19)
+            {
+                return null;
+            }
+        }
+
+        public bool ApproveReservation(int reservationId) // REQ-18: Approves a pending reservation request, activating it. If the item is already available it is immediately held for the member (REQ-20 notification window starts now)
         {
             OpenConnection();
-            var results = new List<Dictionary<string, object>>();
+
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                int bookId;
+                using (var lookupCommand = _connection.CreateCommand())
+                {
+                    lookupCommand.Transaction = transaction;
+                    lookupCommand.CommandText = "SELECT BookID FROM Reservations WHERE ReservationID = @reservationId AND Status = 'Pending'";
+                    lookupCommand.Parameters.AddWithValue("@reservationId", reservationId);
+
+                    var result = lookupCommand.ExecuteScalar();
+                    if (result == null)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+
+                    bookId = Convert.ToInt32(result);
+                }
+
+                using (var updateReservationCommand = _connection.CreateCommand())
+                {
+                    updateReservationCommand.Transaction = transaction;
+                    updateReservationCommand.CommandText = "UPDATE Reservations SET Status = 'Active' WHERE ReservationID = @reservationId AND Status = 'Pending'";
+                    updateReservationCommand.Parameters.AddWithValue("@reservationId", reservationId);
+
+                    if (updateReservationCommand.ExecuteNonQuery() == 0)
+                    {
+                        transaction.Rollback();
+                        return false;
+                    }
+                }
+
+                using (var bookStatusCommand = _connection.CreateCommand())
+                {
+                    bookStatusCommand.Transaction = transaction;
+                    bookStatusCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
+                    bookStatusCommand.Parameters.AddWithValue("@bookId", bookId);
+                    string? bookStatus = bookStatusCommand.ExecuteScalar()?.ToString();
+
+                    if (bookStatus == "Available")
+                    {
+                        using (var updateBookCommand = _connection.CreateCommand())
+                        {
+                            updateBookCommand.Transaction = transaction;
+                            updateBookCommand.CommandText = "UPDATE Books SET Status = 'Reserved' WHERE BookID = @bookId";
+                            updateBookCommand.Parameters.AddWithValue("@bookId", bookId);
+                            updateBookCommand.ExecuteNonQuery();
+                        }
+
+                        using (var notifyCommand = _connection.CreateCommand())
+                        {
+                            notifyCommand.Transaction = transaction;
+                            notifyCommand.CommandText = "UPDATE Reservations SET NotifiedDate = @notifiedDate WHERE ReservationID = @reservationId";
+                            notifyCommand.Parameters.AddWithValue("@notifiedDate", DateTime.Today.ToString("yyyy-MM-dd"));
+                            notifyCommand.Parameters.AddWithValue("@reservationId", reservationId);
+                            notifyCommand.ExecuteNonQuery();
+                        }
+                    }
+                }
+
+                transaction.Commit();
+                return true;
+            }
+        }
+
+        public bool RejectReservation(int reservationId) // REQ-18: Rejects a pending reservation request, closing it without changing the item's status
+        {
+            OpenConnection();
 
             using (var command = _connection!.CreateCommand())
             {
-                command.CommandText = @"
-                    SELECT R.ReservationID, R.BookID, B.Title, B.Author, R.ReservationDate
-                    FROM Reservations R
-                    JOIN Books B ON R.BookID = B.BookID
-                    WHERE R.MemberID = @memberId AND R.FulfilledDate IS NULL
-                    ORDER BY R.ReservationDate";
+                command.CommandText = "UPDATE Reservations SET Status = 'Rejected' WHERE ReservationID = @reservationId AND Status = 'Pending'";
+                command.Parameters.AddWithValue("@reservationId", reservationId);
 
-                command.Parameters.AddWithValue("@memberId", memberId);
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        results.Add(new Dictionary<string, object>
-                        {
-                            ["ReservationID"] = reader["ReservationID"],
-                            ["BookID"] = reader["BookID"],
-                            ["Title"] = reader["Title"],
-                            ["Author"] = reader["Author"],
-                            ["ReservationDate"] = reader["ReservationDate"]
-                        });
-                    }
-                }
+                return command.ExecuteNonQuery() > 0;
             }
-
-            return results;
         }
 
-        public List<Dictionary<string, object>> GetAllActiveReservations() // Gets all active reservations system-wide, including book and member details, for staff reporting
+        public List<Dictionary<string, object>> GetPendingReservations() // REQ-18: Gets all pending reservation requests system-wide, for staff approval
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -962,7 +1205,7 @@ namespace LibraryQA.Core.Database
                     FROM Reservations R
                     JOIN Books B ON R.BookID = B.BookID
                     JOIN Accounts A ON R.MemberID = A.AccountID
-                    WHERE R.FulfilledDate IS NULL
+                    WHERE R.Status = 'Pending'
                     ORDER BY R.ReservationDate";
 
                 using (var reader = command.ExecuteReader())
@@ -986,13 +1229,142 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        public int GetTotalActiveReservationsCount() // Gets the total count of active reservations system-wide, for staff reporting
+        public int GetActiveOrPendingCount(int memberId) // REQ-18: Gets the combined count of active and pending loans/reservations for a member, used to enforce the request limit
         {
             OpenConnection();
 
             using (var command = _connection!.CreateCommand())
             {
-                command.CommandText = "SELECT COUNT(*) FROM Reservations WHERE FulfilledDate IS NULL";
+                command.CommandText = @"
+                    SELECT
+                        (SELECT COUNT(*) FROM Loans WHERE MemberID = @memberId AND Status IN ('Pending', 'Active') AND ReturnDate IS NULL)
+                        +
+                        (SELECT COUNT(*) FROM Reservations WHERE MemberID = @memberId AND Status IN ('Pending', 'Active') AND FulfilledDate IS NULL)";
+                command.Parameters.AddWithValue("@memberId", memberId);
+
+                var result = command.ExecuteScalar();
+                return result != null ? Convert.ToInt32(result) : 0;
+            }
+        }
+
+        public List<Dictionary<string, object>> GetRejectedNotices(int memberId) // REQ-18: Gets rejected loan/reservation requests for a member, so they can be informed of the rejection
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT 'Loan' AS RequestType, B.Title, L.LoanDate AS RequestDate
+                    FROM Loans L
+                    JOIN Books B ON L.BookID = B.BookID
+                    WHERE L.MemberID = @memberId AND L.Status = 'Rejected'
+                    UNION ALL
+                    SELECT 'Reservation' AS RequestType, B.Title, R.ReservationDate AS RequestDate
+                    FROM Reservations R
+                    JOIN Books B ON R.BookID = B.BookID
+                    WHERE R.MemberID = @memberId AND R.Status = 'Rejected'
+                    ORDER BY RequestDate DESC";
+                command.Parameters.AddWithValue("@memberId", memberId);
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["RequestType"] = reader["RequestType"],
+                            ["Title"] = reader["Title"],
+                            ["RequestDate"] = reader["RequestDate"]
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        public List<Dictionary<string, object>> GetActiveReservations(int memberId) // Gets all active reservations for a specific member, including book details and reservation date
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT R.ReservationID, R.BookID, B.Title, B.Author, R.ReservationDate, R.Status
+                    FROM Reservations R
+                    JOIN Books B ON R.BookID = B.BookID
+                    WHERE R.MemberID = @memberId AND R.FulfilledDate IS NULL AND R.Status IN ('Pending', 'Active')
+                    ORDER BY R.ReservationDate";
+
+                command.Parameters.AddWithValue("@memberId", memberId);
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["ReservationID"] = reader["ReservationID"],
+                            ["BookID"] = reader["BookID"],
+                            ["Title"] = reader["Title"],
+                            ["Author"] = reader["Author"],
+                            ["ReservationDate"] = reader["ReservationDate"],
+                            ["Status"] = reader["Status"]
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        public List<Dictionary<string, object>> GetAllActiveReservations()
+        {
+            OpenConnection();
+            var results = new List<Dictionary<string, object>>();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT R.ReservationID, R.BookID, B.Title, B.Author,
+                           R.MemberID, A.FirstName, A.LastName, R.ReservationDate, R.Status
+                    FROM Reservations R
+                    JOIN Books B ON R.BookID = B.BookID
+                    JOIN Accounts A ON R.MemberID = A.AccountID
+                    WHERE R.FulfilledDate IS NULL AND R.Status IN ('Pending', 'Active')
+                    ORDER BY R.ReservationDate";
+
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        results.Add(new Dictionary<string, object>
+                        {
+                            ["ReservationID"] = reader["ReservationID"],
+                            ["BookID"] = reader["BookID"],
+                            ["Title"] = reader["Title"],
+                            ["Author"] = reader["Author"],
+                            ["MemberID"] = reader["MemberID"],
+                            ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
+                            ["ReservationDate"] = reader["ReservationDate"],
+                            ["Status"] = reader["Status"]
+                        });
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        public int GetTotalActiveReservationsCount()
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = "SELECT COUNT(*) FROM Reservations WHERE FulfilledDate IS NULL AND Status = 'Active'";
 
                 var result = command.ExecuteScalar();
                 return result != null ? Convert.ToInt32(result) : 0;
@@ -1012,7 +1384,7 @@ namespace LibraryQA.Core.Database
                     lookupCommand.Transaction = transaction;
                     lookupCommand.CommandText = @"
                         SELECT BookID, MemberID FROM Reservations
-                        WHERE ReservationID = @reservationId AND FulfilledDate IS NULL";
+                        WHERE ReservationID = @reservationId AND FulfilledDate IS NULL AND Status = 'Active'";
                     lookupCommand.Parameters.AddWithValue("@reservationId", reservationId);
 
                     using (var reader = lookupCommand.ExecuteReader())
@@ -1097,6 +1469,68 @@ namespace LibraryQA.Core.Database
             }
         }
 
+        // REQ-20: an uncollected reservation is cancelled if the item has sat available/held for
+        // this member for more than `expiryDays` (default 5), counted from NotifiedDate - the date
+        // the item became available to them. The item's status then returns to "Available".
+        public int ExpireReservations(DateTime? today = null, int expiryDays = 5)
+        {
+            OpenConnection();
+            DateTime asAt = (today ?? DateTime.Today).Date;
+            string cutoff = asAt.AddDays(-expiryDays).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+            var expiredReservationIds = new List<int>();
+            var bookIds = new List<int>();
+
+            using (var selectCommand = _connection!.CreateCommand())
+            {
+                selectCommand.CommandText = @"
+                    SELECT ReservationID, BookID FROM Reservations
+                    WHERE Status = 'Active' AND FulfilledDate IS NULL
+                          AND NotifiedDate IS NOT NULL AND date(NotifiedDate) <= date(@cutoff)";
+                selectCommand.Parameters.AddWithValue("@cutoff", cutoff);
+
+                using (var reader = selectCommand.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        expiredReservationIds.Add(Convert.ToInt32(reader["ReservationID"]));
+                        bookIds.Add(Convert.ToInt32(reader["BookID"]));
+                    }
+                }
+            }
+
+            if (expiredReservationIds.Count == 0)
+            {
+                return 0;
+            }
+
+            using (var transaction = _connection!.BeginTransaction())
+            {
+                for (int i = 0; i < expiredReservationIds.Count; i++)
+                {
+                    using (var updateReservationCommand = _connection.CreateCommand())
+                    {
+                        updateReservationCommand.Transaction = transaction;
+                        updateReservationCommand.CommandText = "UPDATE Reservations SET Status = 'Expired' WHERE ReservationID = @reservationId AND Status = 'Active'";
+                        updateReservationCommand.Parameters.AddWithValue("@reservationId", expiredReservationIds[i]);
+                        updateReservationCommand.ExecuteNonQuery();
+                    }
+
+                    using (var updateBookCommand = _connection.CreateCommand())
+                    {
+                        updateBookCommand.Transaction = transaction;
+                        updateBookCommand.CommandText = "UPDATE Books SET Status = 'Available' WHERE BookID = @bookId";
+                        updateBookCommand.Parameters.AddWithValue("@bookId", bookIds[i]);
+                        updateBookCommand.ExecuteNonQuery();
+                    }
+                }
+
+                transaction.Commit();
+            }
+
+            return expiredReservationIds.Count;
+        }
+
         #endregion
 
         #region Staff Reporting Operations
@@ -1115,15 +1549,15 @@ namespace LibraryQA.Core.Database
                 command.Parameters.AddWithValue("@today", asAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
 
                 // Total items on loan
-                command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL";
+                command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND Status = 'Active'";
                 stats["TotalOnLoan"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Overdue items
-                command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND date(@today) > date(DueDate)";
+                command.CommandText = "SELECT COUNT(*) FROM Loans WHERE ReturnDate IS NULL AND Status = 'Active' AND date(@today) > date(DueDate)";
                 stats["TotalOverdue"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Active reservations
-                command.CommandText = "SELECT COUNT(*) FROM Reservations WHERE FulfilledDate IS NULL";
+                command.CommandText = "SELECT COUNT(*) FROM Reservations WHERE FulfilledDate IS NULL AND Status = 'Active'";
                 stats["TotalReservations"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Total members

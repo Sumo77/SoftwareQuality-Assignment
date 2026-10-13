@@ -37,10 +37,11 @@ namespace LibraryQA.Tests
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
         }
 
-        // TC-8: Borrowing an "available" book sets a due date to 14 days from current date and changes status to "on loan" (REQ-2a, REQ-14)
+        // TC-8: Borrowing an "available" book submits a pending request with a due date 14 days from
+        // the current date, but leaves the book's status unchanged until staff approve it (REQ-18, REQ-2a, REQ-14)
         [TestMethod]
         [TestCategory("Smoke")]
-        public void BorrowBook_AvailableBook_SetsDueDateAndUpdatesStatus()
+        public void BorrowBook_AvailableBook_CreatesPendingRequestWithDueDate()
         {
             var result = _service.BorrowBook(bookId: 1, memberId: 1);
 
@@ -49,6 +50,28 @@ namespace LibraryQA.Tests
 
             using (var db = new DatabaseHelper(_connectionString))
             {
+                var book = db.GetBookById(1);
+                Assert.AreEqual("Available", book!["Status"].ToString());
+            }
+        }
+
+        // TC-8b: Once staff approve a pending loan request, the book's status updates to "On Loan" (REQ-18)
+        [TestMethod]
+        public void ApproveLoan_PendingRequest_ActivatesLoanAndUpdatesBookStatus()
+        {
+            var result = _service.BorrowBook(bookId: 1, memberId: 1);
+            Assert.IsTrue(result.Success);
+
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                var pending = db.GetPendingLoans();
+                int loanId = Convert.ToInt32(pending.Find(l => Convert.ToInt32(l["BookID"]) == 1)!["LoanID"]);
+
+                var approvalService = new ApprovalService(_connectionString);
+                var approval = approvalService.ApproveLoan(loanId);
+
+                Assert.IsTrue(approval.Success);
+
                 var book = db.GetBookById(1);
                 Assert.AreEqual("On Loan", book!["Status"].ToString());
             }
@@ -70,7 +93,8 @@ namespace LibraryQA.Tests
             }
         }
 
-        // TC-10: A member already holding two active loans cannot borrow a third (REQ-8)
+        // TC-10: A member already holding two active loans cannot borrow a third - the request limit
+        // counts active and pending loans/reservations together (REQ-18, REQ-8)
         [TestMethod]
         public void BorrowBook_MemberAtLoanLimit_RejectsWithLimitMessage()
         {

@@ -56,9 +56,20 @@ The requirements themselves are defined in `Requirements.md`.
 | TC-52 | Failed attempts against an unknown username record nothing | Integration | Summer | Pass |
 | TC-53 | A suspended account is not converted to Locked by failed attempts | Integration | Summer | Pass |
 | TC-54 | The staff notice counts every overdue item, and is absent when there are none | Unit | Summer | Pass |
+| TC-55 | A loan request is held as "Pending" and is not yet active | Unit | John | Pass |
+| TC-56 | A reservation request is held as "Pending" and is not yet active | Unit | John | Pass |
+| TC-57 | Approving a pending loan activates it and updates the book's status | Integration | John | Pass |
+| TC-58 | Approving a pending reservation activates it | Integration | John | Pass |
+| TC-59 | Rejecting a pending loan closes it, keeps the book's status unchanged, and notifies the member | Integration | John | Pass |
+| TC-60 | Rejecting a pending reservation closes it without changing the book's status | Integration | John | Pass |
+| TC-61 | A member at the combined active+pending limit is rejected from borrowing a 3rd item | Unit | John | Pass |
+| TC-62 | Rejecting a pending loan frees up the member's request limit | Unit | John | Pass |
+| TC-63 | An uncollected reservation expires after 5 days and the book returns to Available | Integration | John | Pass |
+| TC-64 | A reservation collected within the 5-day window is fulfilled and does not expire | Integration | John | Pass |
+| TC-65 | An expired reservation no longer appears in the member's active reservations | Integration | John | Pass |
 
 Test numbers are allocated in blocks to avoid collisions during parallel development:
-John TC-12 to TC-19, Daria TC-20 to TC-29, Summer TC-30 to TC-54.
+John TC-12 to TC-19, Daria TC-20 to TC-29, Summer TC-30 to TC-54, John (REQ-18/REQ-20) TC-55 to TC-65.
 
 ---
 
@@ -84,9 +95,9 @@ John TC-12 to TC-19, Daria TC-20 to TC-29, Summer TC-30 to TC-54.
 | REQ-15 | Performance | Non-Functional | Catalogue search on a 5,000-book catalogue | TC-37 | Pass | — | Partial | Partial |
 | REQ-16 | Account Creation | Functional | Registration screen; account stays Pending until staff activate it (RegistrationService) | TC-40, TC-41, TC-42, TC-50, TC-51 | Pass | — | Implemented | Yes |
 | REQ-17 | Overdue Notices | Functional | Overdue notice at member login and on the staff dashboard (OverdueNotice) | TC-46, TC-47, TC-48, TC-54 | Pass | — | Implemented | Yes |
-| REQ-18 | Loan and Reservation Approval | Functional | Loan and reservation requests held Pending until staff approve or reject | — | Not run | — | Missing | No |
+| Loan and reservation requests held Pending until staff approve or reject | TC-55, TC-56, TC-57, TC-58, TC-59, TC-60, TC-61, TC-62 | Pass | — | Implemented | Yes |
 | REQ-19 | Member Suspension | Functional | Staff suspend and reactivate accounts; suspended message at login | TC-20, TC-53 | Pass | DEF-19, DEF-20 | Implemented | Yes |
-| REQ-20 | Reservation Expiry | Functional | Uncollected reservation cancelled after 5 days; book returns to Available | — | Not run | — | Partial | No |
+| Uncollected reservation cancelled after 5 days; book returns to Available | TC-63, TC-64, TC-65 | Pass | — | Implemented | Yes |
 | REQ-21 | Login Lockout | Functional | Account locked after 5 failed attempts; staff unlock | TC-43, TC-44, TC-45, TC-49, TC-52, TC-53 | Pass | — | Implemented | Yes |
 
 **Column meanings**
