@@ -1,0 +1,97 @@
+<UserControl x:Class="LibraryQA.Views.CatalogueManagementView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="500" d:DesignWidth="750"
+             Loaded="CatalogueManagementView_Loaded">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12">
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="SearchBox" Grid.Column="0" Padding="6"/>
+                <Button Content="Search" Grid.Column="1" Padding="8,6" Margin="8,0,0,0" Click="SearchButton_Click"/>
+                <Button Content="Show All" Grid.Column="2" Padding="8,6" Margin="8,0,0,0" Click="ShowAllButton_Click"/>
+            </Grid>
+
+            <ListView x:Name="BooksListView" Height="170" SelectionChanged="BooksListView_SelectionChanged">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="ID" Width="45" DisplayMemberBinding="{Binding BookId}"/>
+                        <GridViewColumn Header="Title" Width="210" DisplayMemberBinding="{Binding Title}"/>
+                        <GridViewColumn Header="Author" Width="140" DisplayMemberBinding="{Binding Author}"/>
+                        <GridViewColumn Header="ISBN" Width="120" DisplayMemberBinding="{Binding Isbn}"/>
+                        <GridViewColumn Header="Year" Width="50" DisplayMemberBinding="{Binding Year}"/>
+                        <GridViewColumn Header="Genre" Width="90" DisplayMemberBinding="{Binding Genre}"/>
+                        <GridViewColumn Header="Status" Width="80" DisplayMemberBinding="{Binding Status}"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+
+            <TextBlock x:Name="FormHeading" Text="Add a new book" FontWeight="Bold" Margin="0,12,0,2"/>
+            <TextBlock Text="* required. Select a book in the list above to edit or remove it." Margin="0,0,0,6"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,6,6">
+                    <TextBlock Text="Title *"/>
+                    <TextBox x:Name="TitleBox" Padding="6"/>
+                </StackPanel>
+                <StackPanel Grid.Row="0" Grid.Column="1" Margin="6,0,0,6">
+                    <TextBlock Text="Author *"/>
+                    <TextBox x:Name="AuthorBox" Padding="6"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,6,6">
+                    <TextBlock Text="ISBN (10 or 13 digits)"/>
+                    <TextBox x:Name="IsbnBox" Padding="6"/>
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0,0,6">
+                    <TextBlock Text="Publication year"/>
+                    <TextBox x:Name="YearBox" Padding="6"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,6,6">
+                    <TextBlock Text="Publisher"/>
+                    <TextBox x:Name="PublisherBox" Padding="6"/>
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0,0,6">
+                    <TextBlock Text="Genre"/>
+                    <TextBox x:Name="GenreBox" Padding="6"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,6">
+                    <TextBlock Text="Description"/>
+                    <TextBox x:Name="DescriptionBox" Padding="6" Height="60" AcceptsReturn="True"
+                             TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                <Button Content="Add Book" Padding="8,4" Margin="0,0,8,0" Click="AddButton_Click"/>
+                <Button x:Name="SaveButton" Content="Save Changes" Padding="8,4" Margin="0,0,8,0"
+                        IsEnabled="False" Click="SaveButton_Click"/>
+                <Button x:Name="RemoveButton" Content="Remove Selected" Padding="8,4" Margin="0,0,8,0"
+                        IsEnabled="False" Click="RemoveButton_Click"/>
+                <Button Content="Clear Form" Padding="8,4" Click="ClearButton_Click"/>
+            </StackPanel>
+
+            <TextBlock x:Name="StatusText" Margin="0,12,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

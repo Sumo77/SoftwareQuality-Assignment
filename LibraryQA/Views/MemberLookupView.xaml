@@ -1,0 +1,62 @@
+<UserControl x:Class="LibraryQA.Views.MemberLookupView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="500" d:DesignWidth="750"
+             IsVisibleChanged="MemberLookupView_IsVisibleChanged">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12">
+            <TextBlock Text="Member" Margin="0,0,0,2"/>
+            <StackPanel Orientation="Horizontal">
+                <ComboBox x:Name="MemberComboBox" Width="360" Padding="6"/>
+                <Button Content="Look Up" Padding="8,6" Margin="8,0,0,0" Click="LookUpButton_Click"/>
+            </StackPanel>
+
+            <TextBlock x:Name="StatusText" Margin="0,12,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
+
+            <StackPanel x:Name="ResultPanel" Visibility="Collapsed" Margin="0,12,0,0">
+                <TextBlock x:Name="NameText" FontWeight="Bold" FontSize="15"/>
+                <TextBlock x:Name="DetailText" Margin="0,2,0,0"/>
+                <TextBlock x:Name="ContactText" Margin="0,2,0,0" TextWrapping="Wrap"/>
+
+                <TextBlock x:Name="LoansHeading" FontWeight="Bold" Margin="0,14,0,4"/>
+                <ListView x:Name="LoansListView" Height="110">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Loan ID" Width="60" DisplayMemberBinding="{Binding LoanId}"/>
+                            <GridViewColumn Header="Title" Width="240" DisplayMemberBinding="{Binding Title}"/>
+                            <GridViewColumn Header="Borrowed On" Width="100" DisplayMemberBinding="{Binding BorrowedOn}"/>
+                            <GridViewColumn Header="Due Date" Width="100" DisplayMemberBinding="{Binding DueDate}"/>
+                            <GridViewColumn Header="Status" Width="80" DisplayMemberBinding="{Binding Status}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <TextBlock x:Name="OverdueHeading" FontWeight="Bold" Margin="0,14,0,4"/>
+                <ListView x:Name="OverdueListView" Height="90">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Loan ID" Width="60" DisplayMemberBinding="{Binding LoanId}"/>
+                            <GridViewColumn Header="Title" Width="240" DisplayMemberBinding="{Binding Title}"/>
+                            <GridViewColumn Header="Due Date" Width="100" DisplayMemberBinding="{Binding DueDate}"/>
+                            <GridViewColumn Header="Days Overdue" Width="100" DisplayMemberBinding="{Binding DaysOverdue}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+
+                <TextBlock x:Name="ReservationsHeading" FontWeight="Bold" Margin="0,14,0,4"/>
+                <ListView x:Name="ReservationsListView" Height="90">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Reservation ID" Width="100" DisplayMemberBinding="{Binding ReservationId}"/>
+                            <GridViewColumn Header="Title" Width="240" DisplayMemberBinding="{Binding Title}"/>
+                            <GridViewColumn Header="Reserved On" Width="110" DisplayMemberBinding="{Binding ReservedOn}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
