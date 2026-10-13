@@ -50,7 +50,8 @@ namespace LibraryQA.Core.Services
                     return new BorrowResult { Success = false, Message = "This book is currently not available to borrow - It may be able to be reserved, otherwise please check back and try again at a later date." };
                 }
 
-                if (db.GetActiveLoanCount(memberId) >= MaxActiveLoans) // Checks if member has reached borrowing limit
+                // REQ-18: active and pending loans/reservations together count towards the limit
+                if (db.GetActiveOrPendingCount(memberId) >= MaxActiveLoans)
                 {
                     return new BorrowResult { Success = false, Message = "The borrowing limit has been reached - Maximum " + MaxActiveLoans + " books can be borrowed at a time." };
                 }
@@ -58,22 +59,22 @@ namespace LibraryQA.Core.Services
                 DateTime loanDate = DateTime.Today;
                 DateTime dueDate = loanDate.AddDays(LoanPeriodDays);
 
-                int? loanId = db.CreateLoan(bookId, memberId, loanDate, dueDate); // Create book loan(also sets status to "On Loan" internally)
+                // REQ-18: the loan request is held as "Pending" until a staff member approves or rejects it
+                int? loanId = db.CreateLoanRequest(bookId, memberId, loanDate, dueDate);
 
-                if (loanId == null) // Check book loan was successful
+                if (loanId == null) // Check book loan request was successful
                 {
-                    return new BorrowResult { Success = false, Message = "Unable to complete the loan. Please try again." };
+                    return new BorrowResult { Success = false, Message = "Unable to complete the loan request. Please try again." };
                 }
 
                 return new BorrowResult
                 {
                     Success = true,
-                    Message = "Borrowed " + book["Title"] + " successfully.",
+                    Message = "Your request to borrow " + book["Title"] + " has been submitted and is pending staff approval.",
                     DueDate = dueDate,
                     LoanId = loanId,
                     BookTitle = book["Title"]?.ToString()
                 };
-
             }
         }
 
@@ -110,9 +111,18 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult { Success = false, Message = "You already have this book on loan." };
                 }
 
-                int? reservationId = db.CreateReservation(bookId, memberId, DateTime.Today); // Create reservation
+                // REQ-18: active and pending loans/reservations together count towards the limit
+                if (db.GetActiveOrPendingCount(memberId) >= MaxActiveLoans)
+                {
+                    return new ReserveResult { Success = false, Message = "The borrowing limit has been reached - Maximum " + MaxActiveLoans + " books can be borrowed or reserved at a time." };
+                }
 
-                if (reservationId == null) // Check if reservation was successful
+                // REQ-18: the reservation request is held as "Pending" until a staff member approves or rejects it.
+                // The book's status is not changed until approval - ApproveReservation and ProcessReturn
+                // are responsible for promoting the catalogue status once the request is active.
+                int? reservationId = db.CreateReservationRequest(bookId, memberId, DateTime.Today);
+
+                if (reservationId == null) // Check if reservation request was successful
                 {
                     return new ReserveResult
                     {
@@ -121,15 +131,7 @@ namespace LibraryQA.Core.Services
                     };
                 }
 
-                // Only promote the catalogue status to Reserved if the book isn't currently On Loan -
-                // it must stay On Loan until the current borrower returns it. ProcessReturn is
-                // responsible for transitioning the status to Reserved once the loan is closed.
-                if (book["Status"].ToString() != "On Loan")
-                {
-                    db.UpdateBookStatus(bookId, "Reserved");
-                }
-
-                return new ReserveResult { Success = true, Message = "Reserved successfully." };
+                return new ReserveResult { Success = true, Message = "Your request to reserve the book has been submitted and is pending staff approval." };
             }
         }
     }

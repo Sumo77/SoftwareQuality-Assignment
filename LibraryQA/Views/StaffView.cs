@@ -36,6 +36,7 @@ namespace LibraryQA.Views
                 LoadReservations();
                 LoadAccountsList();
                 LoadReporting();
+                LoadPendingRequests();
             }
             catch (SqliteException ex) // DEF-11: a database failure must not close the application
             {
@@ -424,6 +425,97 @@ namespace LibraryQA.Views
             RefreshAllData();
         }
 
+        private void LoadPendingRequests() // REQ-18: Load pending loan and reservation requests awaiting staff approval
+        {
+            using var db = new DatabaseHelper(App.ConnectionString);
+
+            var pendingLoans = db.GetPendingLoans()
+                .Select(row => new PendingLoanItem
+                {
+                    LoanId = Convert.ToInt32(row["LoanID"]),
+                    Title = row["Title"]?.ToString() ?? "",
+                    MemberName = row["MemberName"]?.ToString() ?? "",
+                    MemberId = Convert.ToInt32(row["MemberID"]),
+                    LoanDate = row["LoanDate"]?.ToString() ?? ""
+                })
+                .ToList();
+
+            PendingLoansListView.ItemsSource = pendingLoans;
+
+            var pendingReservations = db.GetPendingReservations()
+                .Select(row => new PendingReservationItem
+                {
+                    ReservationId = Convert.ToInt32(row["ReservationID"]),
+                    Title = row["Title"]?.ToString() ?? "",
+                    MemberName = row["MemberName"]?.ToString() ?? "",
+                    MemberId = Convert.ToInt32(row["MemberID"]),
+                    ReservationDate = row["ReservationDate"]?.ToString() ?? ""
+                })
+                .ToList();
+
+            PendingReservationsListView.ItemsSource = pendingReservations;
+        }
+
+        private void ApproveLoanButton_Click(object sender, RoutedEventArgs e) // REQ-18: Approve a pending loan request, activating it and updating the book's status
+        {
+            if (!int.TryParse(PendingLoanIdBox.Text.Trim(), out int loanId))
+            {
+                ShowPendingRequestsStatus("Please enter a valid numeric Loan ID.", isError: true);
+                return;
+            }
+
+            var result = new ApprovalService(App.ConnectionString).ApproveLoan(loanId);
+            ShowPendingRequestsStatus(result.Message, isError: !result.Success);
+            RefreshAllData();
+        }
+
+        private void RejectLoanButton_Click(object sender, RoutedEventArgs e) // REQ-18: Reject a pending loan request without changing the item's status
+        {
+            if (!int.TryParse(PendingLoanIdBox.Text.Trim(), out int loanId))
+            {
+                ShowPendingRequestsStatus("Please enter a valid numeric Loan ID.", isError: true);
+                return;
+            }
+
+            var result = new ApprovalService(App.ConnectionString).RejectLoan(loanId);
+            ShowPendingRequestsStatus(result.Message, isError: !result.Success);
+            RefreshAllData();
+        }
+
+        private void ApproveReservationButton_Click(object sender, RoutedEventArgs e) // REQ-18: Approve a pending reservation request, activating it
+        {
+            if (!int.TryParse(PendingReservationIdBox.Text.Trim(), out int reservationId))
+            {
+                ShowPendingRequestsStatus("Please enter a valid numeric Reservation ID.", isError: true);
+                return;
+            }
+
+            var result = new ApprovalService(App.ConnectionString).ApproveReservation(reservationId);
+            ShowPendingRequestsStatus(result.Message, isError: !result.Success);
+            RefreshAllData();
+        }
+
+        private void RejectReservationButton_Click(object sender, RoutedEventArgs e) // REQ-18: Reject a pending reservation request without changing the item's status
+        {
+            if (!int.TryParse(PendingReservationIdBox.Text.Trim(), out int reservationId))
+            {
+                ShowPendingRequestsStatus("Please enter a valid numeric Reservation ID.", isError: true);
+                return;
+            }
+
+            var result = new ApprovalService(App.ConnectionString).RejectReservation(reservationId);
+            ShowPendingRequestsStatus(result.Message, isError: !result.Success);
+            RefreshAllData();
+        }
+
+        private void ShowPendingRequestsStatus(string message, bool isError) // Display a status message for pending request approval/rejection
+        {
+            PendingRequestsStatusText.Text = isError ? $"⚠ {message}" : $"✓ {message}";
+            PendingRequestsStatusText.Foreground = isError
+                ? System.Windows.Media.Brushes.Red
+                : System.Windows.Media.Brushes.Green;
+        }
+
         private void LoadReporting() // Load reporting statistics and the most borrowed books, then display them in the interface
         {
             using var db = new DatabaseHelper(App.ConnectionString);
@@ -509,6 +601,24 @@ namespace LibraryQA.Views
         {
             public string Title { get; set; } = "";
             public int TimesBorrowed { get; set; }
+        }
+
+        private class PendingLoanItem // REQ-18: Represents a pending loan request awaiting staff approval
+        {
+            public int LoanId { get; set; }
+            public string Title { get; set; } = "";
+            public string MemberName { get; set; } = "";
+            public int MemberId { get; set; }
+            public string LoanDate { get; set; } = "";
+        }
+
+        private class PendingReservationItem // REQ-18: Represents a pending reservation request awaiting staff approval
+        {
+            public int ReservationId { get; set; }
+            public string Title { get; set; } = "";
+            public string MemberName { get; set; } = "";
+            public int MemberId { get; set; }
+            public string ReservationDate { get; set; } = "";
         }
     }
 }

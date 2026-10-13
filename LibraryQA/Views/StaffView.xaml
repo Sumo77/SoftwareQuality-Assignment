@@ -105,6 +105,49 @@
                 </StackPanel>
             </TabItem>
 
+<TabItem Header="Pending Requests">
+                <StackPanel Margin="12">
+                    <TextBlock Text="Pending Loan Requests" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
+                    <ListView x:Name="PendingLoansListView" Height="150">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Loan ID" Width="70" DisplayMemberBinding="{Binding LoanId}"/>
+                                <GridViewColumn Header="Title" Width="200" DisplayMemberBinding="{Binding Title}"/>
+                                <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
+                                <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
+                                <GridViewColumn Header="Requested On" Width="120" DisplayMemberBinding="{Binding LoanDate}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <TextBlock Text="Loan ID" Margin="0,12,0,4"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="PendingLoanIdBox" Width="150" Padding="6" Margin="0,0,8,0"/>
+                        <Button Content="Approve Loan" Padding="8,4" Margin="0,0,8,0" Click="ApproveLoanButton_Click"/>
+                        <Button Content="Reject Loan" Padding="8,4" Click="RejectLoanButton_Click"/>
+                    </StackPanel>
+
+                    <TextBlock Text="Pending Reservation Requests" FontWeight="Bold" FontSize="14" Margin="0,20,0,8"/>
+                    <ListView x:Name="PendingReservationsListView" Height="150">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Header="Reservation ID" Width="100" DisplayMemberBinding="{Binding ReservationId}"/>
+                                <GridViewColumn Header="Title" Width="200" DisplayMemberBinding="{Binding Title}"/>
+                                <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
+                                <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
+                                <GridViewColumn Header="Requested On" Width="120" DisplayMemberBinding="{Binding ReservationDate}"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <TextBlock Text="Reservation ID" Margin="0,12,0,4"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBox x:Name="PendingReservationIdBox" Width="150" Padding="6" Margin="0,0,8,0"/>
+                        <Button Content="Approve Reservation" Padding="8,4" Margin="0,0,8,0" Click="ApproveReservationButton_Click"/>
+                        <Button Content="Reject Reservation" Padding="8,4" Click="RejectReservationButton_Click"/>
+                    </StackPanel>
+                    <TextBlock x:Name="PendingRequestsStatusText" Margin="0,12,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </TabItem>
+
             <TabItem Header="Account Management">
                 <StackPanel Margin="12">
                     <ListView x:Name="AccountsListView" Height="320">
