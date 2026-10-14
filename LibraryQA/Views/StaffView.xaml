@@ -17,7 +17,11 @@
             </Grid>
         </Border>
 
-        <TabControl Margin="12">
+        <TabControl x:Name="StaffTabs" Margin="12" SelectionChanged="StaffTabs_SelectionChanged">
+            <TabItem Header="Catalogue">
+                <local:CatalogueManagementView x:Name="CatalogueTab"/>
+            </TabItem>
+
             <TabItem Header="Issue / Return">
                 <StackPanel Margin="12">
                     <TextBlock Text="Issue a Loan" FontWeight="Bold" Margin="0,0,0,4"/>
@@ -61,26 +65,6 @@
                 </StackPanel>
             </TabItem>
 
-            <TabItem Header="Overdue Items">
-              <DockPanel>
-                <TextBlock x:Name="OverdueNoticeText" DockPanel.Dock="Top" TextWrapping="Wrap"
-                           Margin="12,12,12,0" Visibility="Collapsed"/>
-                <ListView x:Name="OverdueListView" Margin="12">
-                    <ListView.View>
-                        <GridView>
-                            <GridViewColumn Header="Title" Width="220" DisplayMemberBinding="{Binding Title}"/>
-                            <GridViewColumn Header="Book ID" Width="70" DisplayMemberBinding="{Binding BookId}"/>
-                            <GridViewColumn Header="Loan ID" Width="70" DisplayMemberBinding="{Binding LoanId}"/>
-                            <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
-                            <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
-                            <GridViewColumn Header="Due Date" Width="120" DisplayMemberBinding="{Binding DueDate}"/>
-                            <GridViewColumn Header="Days Overdue" Width="120" DisplayMemberBinding="{Binding DaysOverdue}"/>
-                        </GridView>
-                    </ListView.View>
-                </ListView>
-              </DockPanel>
-            </TabItem>
-
             <TabItem Header="Reservations">
                 <StackPanel Margin="12">
                     <ListView x:Name="ReservationsListView" Height="260">
@@ -92,6 +76,7 @@
                                 <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
                                 <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
                                 <GridViewColumn Header="Reserved On" Width="120" DisplayMemberBinding="{Binding ReservedOn}"/>
+                                <GridViewColumn Header="Collection" Width="150" DisplayMemberBinding="{Binding Collection}"/>
                             </GridView>
                         </ListView.View>
                     </ListView>
@@ -105,7 +90,7 @@
                 </StackPanel>
             </TabItem>
 
-<TabItem Header="Pending Requests">
+            <TabItem Header="Pending Requests">
                 <StackPanel Margin="12">
                     <TextBlock Text="Pending Loan Requests" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
                     <ListView x:Name="PendingLoansListView" Height="150">
@@ -148,6 +133,26 @@
                 </StackPanel>
             </TabItem>
 
+            <TabItem Header="Overdue Items">
+              <DockPanel>
+                <TextBlock x:Name="OverdueNoticeText" DockPanel.Dock="Top" TextWrapping="Wrap"
+                           Margin="12,12,12,0" Visibility="Collapsed"/>
+                <ListView x:Name="OverdueListView" Margin="12">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Title" Width="220" DisplayMemberBinding="{Binding Title}"/>
+                            <GridViewColumn Header="Book ID" Width="70" DisplayMemberBinding="{Binding BookId}"/>
+                            <GridViewColumn Header="Loan ID" Width="70" DisplayMemberBinding="{Binding LoanId}"/>
+                            <GridViewColumn Header="Member" Width="150" DisplayMemberBinding="{Binding MemberName}"/>
+                            <GridViewColumn Header="Member ID" Width="80" DisplayMemberBinding="{Binding MemberId}"/>
+                            <GridViewColumn Header="Due Date" Width="120" DisplayMemberBinding="{Binding DueDate}"/>
+                            <GridViewColumn Header="Days Overdue" Width="120" DisplayMemberBinding="{Binding DaysOverdue}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+              </DockPanel>
+            </TabItem>
+
             <TabItem Header="Account Management">
                 <StackPanel Margin="12">
                     <ListView x:Name="AccountsListView" Height="320">
@@ -177,10 +182,6 @@
                 <local:MemberLookupView x:Name="MemberLookupTab"/>
             </TabItem>
 
-            <TabItem Header="Catalogue">
-                <local:CatalogueManagementView x:Name="CatalogueTab"/>
-            </TabItem>
-
             <TabItem Header="Report Summary">
                 <StackPanel Margin="12">
                     <TextBlock Text="Summary Statistics" FontWeight="Bold" FontSize="14" Margin="0,0,0,8"/>
@@ -202,6 +203,8 @@
                     </ListView>
                 </StackPanel>
             </TabItem>
-        </TabControl>
+        
+
+</TabControl>
     </DockPanel>
 </UserControl>

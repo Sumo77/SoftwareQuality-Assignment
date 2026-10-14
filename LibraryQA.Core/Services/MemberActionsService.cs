@@ -59,7 +59,7 @@ namespace LibraryQA.Core.Services
 
                 if (loanId == null) // Check book loan request was successful
                 {
-                    return new BorrowResult { Success = false, Message = "Unable to complete the loan request. Please try again." };
+                    return new BorrowResult { Success = false, Message = "Someone else has already requested this book and is waiting for staff approval - please check back soon, or reserve it once it is on loan." };
                 }
 
                 return new BorrowResult
@@ -129,7 +129,7 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult
                     {
                         Success = false,
-                        Message = "Unable to reserve the book - It may have been reserved by someone else, so please check back and try again at a later date."
+                        Message = "Someone else reserved this book first - please check back once their hold has been collected or has expired."
                     };
                 }
 
@@ -150,19 +150,19 @@ namespace LibraryQA.Core.Services
 
             if (!string.Equals(account["Role"]?.ToString(), MemberRole, StringComparison.OrdinalIgnoreCase))
             {
-                return $"Account {memberId} is not a Member account and cannot {action}.";
+                return $"This is not a Member account and cannot {action}.";
             }
 
             string status = account["AccountStatus"]?.ToString() ?? string.Empty;
 
             if (string.Equals(status, SuspendedStatus, StringComparison.OrdinalIgnoreCase))
             {
-                return $"Account {memberId} is suspended and cannot {action}.";
+                return $"This account is suspended and cannot {action}.";
             }
 
             if (!string.Equals(status, ActiveStatus, StringComparison.OrdinalIgnoreCase))
             {
-                return $"Account {memberId} is not active and cannot {action}.";
+                return $"This account is not active and cannot {action}.";
             }
 
             return null;

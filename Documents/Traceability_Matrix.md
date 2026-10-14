@@ -120,16 +120,16 @@ reaching TC-99. TC-17 to TC-19 and TC-21 to TC-29 were never required.
 | REQ-1 | Catalogue Management | Functional | Catalogue search by title, author or ISBN with status; staff add, edit and remove records (CatalogueService) | TC-12, TC-66 to TC-82, TC-99 | Pass | DEF-14 | Implemented | Yes |
 | REQ-2a | Borrow | Functional | Staff issue loan: 14-day due date, status set to On Loan | TC-8, TC-91, TC-92, TC-93 | Pass | DEF-06, DEF-07, DEF-08, DEF-13, DEF-21 | Implemented | Yes |
 | REQ-2b | Return | Functional | Process return: closes the loan, records condition, resets status | TC-6, TC-16, TC-93 | Pass | DEF-02, DEF-08, DEF-09, DEF-10, DEF-17 | Implemented | Yes |
-| REQ-3 | Reservations | Functional | Reserve an on-loan book; one reservation per book; fulfilled on return | TC-9, TC-13, TC-14, TC-15, TC-89 | Pass | DEF-03, DEF-06, DEF-13 | Implemented | Yes |
+| REQ-3 | Reservations | Functional | Reserve an on-loan book; one reservation per book; fulfilled on return | TC-9, TC-13, TC-14, TC-15, TC-89 | Pass | DEF-03, DEF-06, DEF-13, DEF-24 | Implemented | Yes |
 | REQ-4 | Overdue | Functional | Overdue flag and days overdue, calculated in OverdueRules from the local date | TC-30, TC-31, TC-32, TC-33, TC-34, TC-86, TC-87, TC-94 | Pass | DEF-09 | Implemented | Yes |
 | REQ-5 | Member Portal | Functional | Member view: own current loans, loan history and reservations | TC-1, TC-11, TC-85 | Pass | DEF-01 | Implemented | Yes |
 | REQ-6 | Staff Portal | Functional | Staff view: report summary, overdue list, member and account lists, member lookup (MemberLookupService) | TC-2, TC-4, TC-7c, TC-42, TC-49, TC-84, TC-85, TC-86, TC-88, TC-89, TC-90, TC-94, TC-95, TC-98 | Pass | DEF-01, DEF-03, DEF-16 | Implemented | Yes |
 | REQ-7 | Access Control | Functional | Role-based routing to the Member or Staff view | TC-1, TC-2, TC-7, TC-7b, TC-7c, TC-96 | Pass | DEF-01, DEF-17, DEF-22 | Implemented | Yes |
 | REQ-8 | Loan Limits | Functional | 2-item loan limit, including pending requests | TC-10, TC-61, TC-62, TC-97 | Pass | DEF-07 | Implemented | Yes |
 | REQ-9 | Input Validation | Functional | Field-level validation messages; search wildcards escaped; catalogue field validation | TC-5, TC-12, TC-41, TC-50, TC-67, TC-68, TC-69, TC-70, TC-72, TC-73, plus the selection guards verified manually | Pass | DEF-07, DEF-12, DEF-14, DEF-16 | Implemented | Yes |
-| REQ-10 | Usability | Non-Functional | Shared message style (UserMessage); members, books and loans picked from lists | Usability walkthrough, 3 participants (see Task 7) | Pass | DEF-01, DEF-04, DEF-12 | Implemented | Indicative |
-| REQ-11 | Security | Non-Functional | SHA-256 password hashes; identical rejection for a wrong password or unknown username; member lookup exposes no credentials | TC-2, TC-3, TC-7, TC-39, TC-40, TC-52, TC-84, TC-88, TC-90 | Pass | DEF-01, DEF-17, DEF-20 | Implemented | Yes |
-| REQ-12 | Reliability | Non-Functional | Database errors caught in every view; failed seeding retried; unknown records fail with a clear message | TC-3, TC-36, TC-78, TC-82, TC-83, plus the database-error handling verified manually | Pass | DEF-04, DEF-09, DEF-11, DEF-15, DEF-18, DEF-19 | Implemented | Yes |
+| REQ-10 | Usability | Non-Functional | Shared message style (UserMessage); members, books and loans picked from lists | Usability walkthrough, 3 participants (see Task 7) | Pass | DEF-01, DEF-04, DEF-12, DEF-24, DEF-25, DEF-26 | Implemented | Indicative |
+| REQ-11 | Security | Non-Functional | SHA-256 password hashes; identical rejection for a wrong password or unknown username; member lookup exposes no credentials | TC-2, TC-3, TC-7, TC-39, TC-40, TC-52, TC-84, TC-88, TC-90 | Pass | DEF-01, DEF-17, DEF-20, DEF-25 | Implemented | Yes |
+| REQ-12 | Reliability | Non-Functional | Database errors caught in every view; failed seeding retried; unknown records fail with a clear message | TC-3, TC-36, TC-78, TC-82, TC-83, plus the database-error handling verified manually | Pass | DEF-04, DEF-09, DEF-11, DEF-15, DEF-18, DEF-19, DEF-25 | Implemented | Yes |
 | REQ-13 | Maintainability | Non-Functional | Business rules held in Core services; shared UserMessage class | Code review at merge, CI quality gates | Reviewed | DEF-08, DEF-23 | Implemented | Informal |
 | REQ-14 | Integrity | Non-Functional | Book status kept in step with loan and reservation records; ISBN uniqueness; removal blocked while loaned or with history | TC-8, TC-9, TC-35, TC-74, TC-76, TC-77, TC-80, TC-81, TC-91, TC-92, TC-93 | Pass | DEF-02, DEF-03, DEF-05, DEF-06, DEF-08, DEF-10, DEF-13, DEF-15, DEF-17, DEF-21 | Implemented | Yes |
 | REQ-15 | Performance | Non-Functional | Catalogue search, staff dashboard refresh and catalogue management, each on a 5,000-book catalogue | TC-37, TC-98, TC-99 | Pass | — | Implemented | Yes |
@@ -137,7 +137,7 @@ reaching TC-99. TC-17 to TC-19 and TC-21 to TC-29 were never required.
 | REQ-17 | Overdue Notices | Functional | Overdue notice at member login and on the staff dashboard (OverdueNotice) | TC-46, TC-47, TC-48, TC-54 | Pass | — | Implemented | Yes |
 | REQ-18 | Loan and Reservation Approval | Functional | Loan and reservation requests held Pending until staff approve or reject | TC-8b, TC-55, TC-56, TC-57, TC-58, TC-59, TC-60, TC-61, TC-62, TC-92 | Pass | DEF-21 | Implemented | Yes |
 | REQ-19 | Member Suspension | Functional | Staff suspend and reactivate accounts; suspended message at login | TC-20, TC-53, TC-96 | Pass | DEF-19, DEF-20, DEF-22 | Implemented | Yes |
-| REQ-20 | Reservation Expiry | Functional | Uncollected reservation cancelled after 5 days; book returns to Available | TC-63, TC-64, TC-65 | Pass | — | Implemented | Yes |
+| REQ-20 | Reservation Expiry | Functional | Uncollected reservation cancelled after 5 days; book returns to Available | TC-63, TC-64, TC-65 | Pass | DEF-24 | Implemented | Yes |
 | REQ-21 | Login Lockout | Functional | Account locked after 5 failed attempts; staff unlock | TC-43, TC-44, TC-45, TC-49, TC-52, TC-53 | Pass | — | Implemented | Yes |
 
 **Column meanings**
@@ -175,6 +175,8 @@ held as evidence.
 | The Pending, Suspended and Locked messages shown on the login screen | REQ-16, REQ-19, REQ-21 |
 | The "please select a member / book / loan" guards on the staff forms | REQ-9 |
 | A database failure showing a message instead of closing the application | REQ-12 |
+| A reservation reading "Ready to collect" once the item is held, and the staff Collection column | REQ-3, REQ-20 |
+| Both views reloading on a tab change, so another session's changes appear | REQ-10 |
 
 ---
 

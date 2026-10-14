@@ -722,6 +722,103 @@ No new test case. This is a duplication removal with no behavioural change, so t
 ---
 
 
+## DEF-24
+
+| | |
+|---|---|
+| **Title** | A held reservation never shows as ready to collect |
+| **Severity** | Medium |
+| **Priority** | P1 |
+| **Status** | Closed |
+| **Found by** | Summer (manual testing) |
+| **Found in** | `DatabaseHelper.GetActiveReservations`, `DatabaseHelper.GetAllActiveReservations` |
+| **Related** | REQ-3 (Reservations), REQ-20 (Reservation Expiry), REQ-10 (Usability) |
+
+**Description:**
+
+When a reserved item is returned, ProcessReturn sets the book to "Reserved" and stamps NotifiedDate, which starts the member's 5-day collection window. Neither reservation query selected NotifiedDate, so nothing on screen distinguished a hold still waiting for an item on loan from one sitting on the shelf ready to be picked up.
+
+The member's Reservations tab showed the raw status, "Active", in both cases. Staff had no indication either, so the Fulfil Reservation action could only be used by guessing or by reading the database directly. The member had no way to know they needed to collect, and the reservation could then expire under REQ-20 without them ever being told it was ready.
+
+**Root cause:**
+
+NotifiedDate was added for REQ-20's expiry calculation and treated as internal bookkeeping. The expiry logic read it correctly, but no screen did, so a column that marks a member-facing event was never shown to the member. The automated tests assert the expiry behaviour from the database side, which is why 90 passing tests did not catch it.
+
+**Fix:**
+
+Both reservation queries now return NotifiedDate. The member's Reservations tab shows a derived status - "Ready to collect", "Awaiting staff approval", or "Waiting - item still on loan" - instead of the raw value, and the staff Reservations tab gained a Collection column reading "Ready since <date>" or "Item still on loan".
+
+Verified by manual walkthrough: a hold reads "Waiting - item still on loan" before the return and "Ready to collect" after, with staff seeing the matching date. Listed in the traceability matrix under behaviour verified manually, because the display is WPF view code.
+
+---
+
+## DEF-25
+
+| | |
+|---|---|
+| **Title** | Refusal messages name an account ID and do not give the real reason |
+| **Severity** | Low |
+| **Priority** | P2 |
+| **Status** | Closed |
+| **Found by** | Summer (manual testing) |
+| **Found in** | `MemberActionsService.RefusalReason`, `MemberActionsService.BorrowBook`, `MemberActionsService.ReserveBook` |
+| **Related** | REQ-10 (Usability), REQ-11 (Security), REQ-12 (Reliability) |
+
+**Description:**
+
+Three refusals read poorly to the person receiving them.
+
+A suspended member was told "Account 1 is suspended and cannot borrow items." The internal account ID means nothing to a member and should not be shown at all.
+
+A loan request refused because another member already had a pending request for that book said only "Unable to complete the loan request. Please try again." Trying again would never work.
+
+A refused reservation said the book "may have been reserved by someone else", listing possibilities rather than the reason. The only reason the insert can fail at that point is that another member holds the reservation.
+
+**Root cause:**
+
+All three messages were written from the implementation's point of view rather than the reader's. The account ID was useful while debugging and was never taken out. The two "unable to" messages were written as catch-alls for a failed database call, before the guards that make the cause knowable were added.
+
+**Fix:**
+
+The account ID was removed from all three refusals in RefusalReason, which now say "This account is suspended and cannot ..." - worded impersonally because staff see the same message when issuing a loan on a member's behalf. The loan refusal names the cause: another member has requested the book and is awaiting approval. The reservation refusal states that someone reserved it first and says when to try again.
+
+Verified by manual walkthrough. No test asserts these strings; TC-96 checks only that the word "suspended" appears, which it still does.
+
+---
+
+## DEF-26
+
+| | |
+|---|---|
+| **Title** | Member and staff views do not pick up changes made in another session |
+| **Severity** | Low |
+| **Priority** | P2 |
+| **Status** | Closed |
+| **Found by** | Summer (manual testing) |
+| **Found in** | `MemberView`, `StaffView` |
+| **Related** | REQ-10 (Usability) |
+
+**Description:**
+
+Both views loaded their data once, on load. StaffView additionally refreshed after each of its own actions, but neither view noticed a change made anywhere else: a member's new request did not appear on the staff screen, and a staff approval or return did not appear on the member's, until the user logged out and back in.
+
+Found while testing DEF-22, which needs two sessions open at once.
+
+**Root cause:**
+
+The views were built for one user at a time, where refreshing after each action is enough. Staff approval (REQ-18) made two people act on the same records in the same minute, and nothing was added to reload when that happens.
+
+**Fix:**
+
+Both TabControls now handle SelectionChanged and reload their data when the user switches tab, so changing tab and coming back shows the current state. MemberView's six loaders were gathered into a RefreshAllData method for the purpose; StaffView already had one. Both handlers ignore selection changes raised by the lists inside a tab, so clicking a row does not reload and lose the selection.
+
+Switching tab is a deliberate choice over a timer: it costs nothing when the window is idle and it is the point at which a user is looking for current data.
+
+Verified by manual walkthrough with two sessions open.
+
+---
+
+
 ## Summary
 
 | ID | Title | Severity | Priority | Status |
@@ -749,3 +846,6 @@ No new test case. This is a duplication removal with no behavioural change, so t
 | DEF-21 | Two members can be loaned the same book at once | High | P1 | Closed |
 | DEF-22 | A suspended member can still place a reservation | Medium | P1 | Closed |
 | DEF-23 | Account state is held in two columns, only one of which is maintained | Low | P3 | Closed |
+| DEF-24 | A held reservation never shows as ready to collect | Medium | P1 | Closed |
+| DEF-25 | Refusal messages name an account ID and do not give the real reason | Low | P2 | Closed |
+| DEF-26 | Member and staff views do not pick up changes made in another session | Low | P2 | Closed |

@@ -25,6 +25,22 @@ namespace LibraryQA.Views
             RefreshAllData();
         }
 
+        // Refresh when the staff switches tab, so changes made in another session appear
+        // without having to log out and back in
+        private void StaffTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!ReferenceEquals(e.OriginalSource, StaffTabs)) return; // ignore inner list selections
+
+            try
+            {
+                RefreshAllData();
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Tab refresh failed - database error: {ex.Message}");
+            }
+        }
+
         private void RefreshAllData() // Refresh all data displayed in the staff interface
         {
             try
@@ -384,7 +400,13 @@ namespace LibraryQA.Views
                     BookId = Convert.ToInt32(row["BookID"]),
                     MemberName = row["MemberName"]?.ToString() ?? "",
                     MemberId = Convert.ToInt32(row["MemberID"]),
-                    ReservedOn = row["ReservationDate"]?.ToString() ?? ""
+                    ReservedOn = row["ReservationDate"]?.ToString() ?? "",
+                    // DEF-24: NotifiedDate is stamped when the item is held, so staff can see what is collectable
+                    Collection = row.TryGetValue("NotifiedDate", out object? notified)
+                        && notified != null && notified != DBNull.Value
+                        && !string.IsNullOrWhiteSpace(notified.ToString())
+                            ? $"Ready since {notified}"
+                            : "Item still on loan"
                 })
                 .ToList();
 
@@ -594,6 +616,7 @@ namespace LibraryQA.Views
             public string MemberName { get; set; } = "";
             public int MemberId { get; set; }
             public string ReservedOn { get; set; } = "";
+            public string Collection { get; set; } = "";
         }
 
         private class MostBorrowedItem // A most-borrowed entry for the reporting list

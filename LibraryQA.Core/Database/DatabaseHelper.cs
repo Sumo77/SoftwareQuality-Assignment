@@ -1334,7 +1334,7 @@ namespace LibraryQA.Core.Database
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT R.ReservationID, R.BookID, B.Title, B.Author, R.ReservationDate, R.Status
+                    SELECT R.ReservationID, R.BookID, B.Title, B.Author, R.ReservationDate, R.Status, R.NotifiedDate
                     FROM Reservations R
                     JOIN Books B ON R.BookID = B.BookID
                     WHERE R.MemberID = @memberId AND R.FulfilledDate IS NULL AND R.Status IN ('Pending', 'Active')
@@ -1353,7 +1353,9 @@ namespace LibraryQA.Core.Database
                             ["Title"] = reader["Title"],
                             ["Author"] = reader["Author"],
                             ["ReservationDate"] = reader["ReservationDate"],
-                            ["Status"] = reader["Status"]
+                            ["Status"] = reader["Status"],
+                            // DEF-24: set once the item is waiting for this member, so a screen can say so
+                            ["NotifiedDate"] = reader["NotifiedDate"] ?? DBNull.Value
                         });
                     }
                 }
@@ -1371,7 +1373,7 @@ namespace LibraryQA.Core.Database
             {
                 command.CommandText = @"
                     SELECT R.ReservationID, R.BookID, B.Title, B.Author,
-                           R.MemberID, A.FirstName, A.LastName, R.ReservationDate, R.Status
+                           R.MemberID, A.FirstName, A.LastName, R.ReservationDate, R.Status, R.NotifiedDate
                     FROM Reservations R
                     JOIN Books B ON R.BookID = B.BookID
                     JOIN Accounts A ON R.MemberID = A.AccountID
@@ -1391,7 +1393,9 @@ namespace LibraryQA.Core.Database
                             ["MemberID"] = reader["MemberID"],
                             ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
                             ["ReservationDate"] = reader["ReservationDate"],
-                            ["Status"] = reader["Status"]
+                            ["Status"] = reader["Status"],
+                            // DEF-24: set once the item is held and waiting for collection
+                            ["NotifiedDate"] = reader["NotifiedDate"] ?? DBNull.Value
                         });
                     }
                 }
