@@ -56,7 +56,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
             SELECT AccountID 
             FROM Accounts 
-            WHERE Username = @username AND IsActive = 1";
+            WHERE Username = @username";
 
                 command.Parameters.AddWithValue("@username", username);
 
@@ -76,8 +76,7 @@ namespace LibraryQA.Core.Database
                     SELECT AccountID 
                     FROM Accounts 
                     WHERE Username = @username 
-                    AND PasswordHash = @passwordHash 
-                    AND IsActive = 1";
+                    AND PasswordHash = @passwordHash";
 
                 command.Parameters.AddWithValue("@username", username);
                 command.Parameters.AddWithValue("@passwordHash", passwordHash);
@@ -186,7 +185,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT AccountID, Username, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate, AccountStatus
                     FROM Accounts 
-                    WHERE AccountID = @accountId AND IsActive = 1";
+                    WHERE AccountID = @accountId";
 
                 command.Parameters.AddWithValue("@accountId", accountId);
 
@@ -223,7 +222,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT AccountID, Username, FirstName, LastName, Email, PhoneNumber, AccountStatus, FailedLoginAttempts
                     FROM Accounts
-                    WHERE Role = 'Member' AND IsActive = 1
+                    WHERE Role = 'Member'
                     ORDER BY LastName, FirstName";
 
                 using (var reader = command.ExecuteReader())
@@ -260,7 +259,6 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT AccountID, Username, FirstName, LastName, Role, Email, PhoneNumber, AccountStatus, FailedLoginAttempts
                     FROM Accounts
-                    WHERE IsActive = 1
                     ORDER BY AccountID";
 
                 using (var reader = command.ExecuteReader())
@@ -670,52 +668,99 @@ namespace LibraryQA.Core.Database
             }
         }
 
+                // DEF-21: True if a pending or active, unreturned loan already claims this book. The
+        // reservation equivalent is HasActiveReservation; this is its counterpart for loans, and
+        // the condition matches idx_loans_active_book in the schema exactly (REQ-2a, REQ-14).
+        public bool HasLiveLoan(int bookId)
+        {
+            OpenConnection();
+
+            using (var command = _connection!.CreateCommand())
+            {
+                command.CommandText = @"
+                    SELECT COUNT(*) 
+                    FROM Loans 
+                    WHERE BookID = @bookId AND ReturnDate IS NULL AND Status IN ('Pending', 'Active')";
+
+                command.Parameters.AddWithValue("@bookId", bookId);
+
+                var result = command.ExecuteScalar();
+                return result != null && Convert.ToInt32(result) > 0;
+            }
+        }
+
         public int? CreateLoanRequest(int bookId, int memberId, DateTime loanDate, DateTime dueDate) // REQ-18: Creates a loan request held as "Pending" until a staff member approves or rejects it. Book status is not changed until approval.
         {
             OpenConnection();
 
-            using (var transaction = _connection!.BeginTransaction())
+            try
             {
-                using (var checkCommand = _connection.CreateCommand())
+                using (var transaction = _connection!.BeginTransaction())
                 {
-                    checkCommand.Transaction = transaction;
-                    checkCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
-                    checkCommand.Parameters.AddWithValue("@bookId", bookId);
+                    using (var checkCommand = _connection.CreateCommand())
+                    {
+                        checkCommand.Transaction = transaction;
+                        checkCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
+                        checkCommand.Parameters.AddWithValue("@bookId", bookId);
 
-                    var status = checkCommand.ExecuteScalar()?.ToString();
-                    if (status != "Available")
+                        var status = checkCommand.ExecuteScalar()?.ToString();
+                        if (status != "Available")
+                        {
+                            transaction.Rollback();
+                            return null;
+                        }
+                    }
+
+                    // DEF-21: an Available book can still be claimed by someone else's pending
+                    // request, because REQ-18 deliberately leaves the book's status alone until
+                    // approval. Without this check two members could both be queued for one copy.
+                    using (var liveLoanCommand = _connection.CreateCommand())
+                    {
+                        liveLoanCommand.Transaction = transaction;
+                        liveLoanCommand.CommandText = @"
+                            SELECT COUNT(*) 
+                            FROM Loans 
+                            WHERE BookID = @bookId AND ReturnDate IS NULL AND Status IN ('Pending', 'Active')";
+                        liveLoanCommand.Parameters.AddWithValue("@bookId", bookId);
+
+                        if (Convert.ToInt32(liveLoanCommand.ExecuteScalar()) > 0)
+                        {
+                            transaction.Rollback();
+                            return null;
+                        }
+                    }
+
+                    int? loanId;
+                    using (var command = _connection.CreateCommand())
+                    {
+                        command.Transaction = transaction;
+                        command.CommandText = @"
+                            INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, Status)
+                            VALUES (@bookId, @memberId, @loanDate, @dueDate, 'Pending');
+                            SELECT last_insert_rowid();";
+
+                        command.Parameters.AddWithValue("@bookId", bookId);
+                        command.Parameters.AddWithValue("@memberId", memberId);
+                        command.Parameters.AddWithValue("@loanDate", loanDate.ToString("yyyy-MM-dd"));
+                        command.Parameters.AddWithValue("@dueDate", dueDate.ToString("yyyy-MM-dd"));
+
+                        var result = command.ExecuteScalar();
+                        loanId = result != null ? Convert.ToInt32(result) : (int?)null;
+                    }
+
+                    if (loanId == null)
                     {
                         transaction.Rollback();
                         return null;
                     }
+
+                    transaction.Commit();
+                    return loanId;
                 }
-
-                int? loanId;
-                using (var command = _connection.CreateCommand())
-                {
-                    command.Transaction = transaction;
-                    command.CommandText = @"
-                        INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, Status)
-                        VALUES (@bookId, @memberId, @loanDate, @dueDate, 'Pending');
-                        SELECT last_insert_rowid();";
-
-                    command.Parameters.AddWithValue("@bookId", bookId);
-                    command.Parameters.AddWithValue("@memberId", memberId);
-                    command.Parameters.AddWithValue("@loanDate", loanDate.ToString("yyyy-MM-dd"));
-                    command.Parameters.AddWithValue("@dueDate", dueDate.ToString("yyyy-MM-dd"));
-
-                    var result = command.ExecuteScalar();
-                    loanId = result != null ? Convert.ToInt32(result) : (int?)null;
-                }
-
-                if (loanId == null)
-                {
-                    transaction.Rollback();
-                    return null;
-                }
-
-                transaction.Commit();
-                return loanId;
+            }
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // idx_loans_active_book - the book was claimed first
+            {
+                return null;
             }
         }
 
@@ -729,7 +774,16 @@ namespace LibraryQA.Core.Database
                 using (var lookupCommand = _connection.CreateCommand())
                 {
                     lookupCommand.Transaction = transaction;
-                    lookupCommand.CommandText = "SELECT BookID FROM Loans WHERE LoanID = @loanId AND Status = 'Pending'";
+                    
+                    // DEF-21: the book must still be Available, not just the request still Pending.
+                    // A request raised before the book went out must not be approved on top of a
+                    // live loan (REQ-2a, REQ-14).
+                    lookupCommand.CommandText = @"
+                        SELECT L.BookID 
+                        FROM Loans L 
+                        JOIN Books B ON L.BookID = B.BookID
+                        WHERE L.LoanID = @loanId AND L.Status = 'Pending' AND B.Status = 'Available'";
+                    
                     lookupCommand.Parameters.AddWithValue("@loanId", loanId);
 
                     var result = lookupCommand.ExecuteScalar();
@@ -1561,7 +1615,7 @@ namespace LibraryQA.Core.Database
                 stats["TotalReservations"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Total members
-                command.CommandText = "SELECT COUNT(*) FROM Accounts WHERE Role = 'Member' AND IsActive = 1";
+                command.CommandText = "SELECT COUNT(*) FROM Accounts WHERE Role = 'Member'";
                 stats["TotalMembers"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Total books in catalogue

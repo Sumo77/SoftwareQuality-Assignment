@@ -17,7 +17,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT AccountID, FirstName, LastName, AccountStatus, Email, PhoneNumber
                     FROM Accounts
-                    WHERE AccountID = @memberId AND Role = 'Member' AND IsActive = 1";
+                    WHERE AccountID = @memberId AND Role = 'Member'";
 
                 command.Parameters.AddWithValue("@memberId", memberId);
 

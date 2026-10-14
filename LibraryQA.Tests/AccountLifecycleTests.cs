@@ -295,5 +295,55 @@ namespace LibraryQA.Tests
                 Assert.AreEqual(0, db.GetFailedLoginAttempts(accountId.Value));
             }
         }
+
+        // TC-96: A member who is not Active can neither borrow nor reserve. Reserving had no account
+        // check at all, so a member suspended during an open session could still place a hold
+        // (REQ-7, REQ-19, DEF-22)
+        [TestMethod]
+        public void MemberActions_AccountNotActive_RefusesBothBorrowingAndReserving()
+        {
+            var actions = new MemberActionsService(_connectionString);
+
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                // Alice (AccountID 1) holds one item, so she is under the limit, and BookID 8 is on
+                // loan to someone else with no hold against it. TC-14 makes this exact call and
+                // expects it to succeed, so the only thing changing here is her account status.
+                Assert.IsTrue(db.SetAccountStatus(1, "Suspended"));
+
+                var borrow = actions.BorrowBook(bookId: 2, memberId: 1);
+                Assert.IsFalse(borrow.Success, "A suspended member must not be able to borrow.");
+                StringAssert.Contains(borrow.Message, "suspended");
+
+                var reserve = actions.ReserveBook(bookId: 8, memberId: 1);
+                Assert.IsFalse(reserve.Success, "A suspended member must not be able to reserve either.");
+                StringAssert.Contains(reserve.Message, "suspended");
+
+                Assert.AreEqual(0, db.GetActiveReservations(1).Count,
+                    "A refused reservation must leave no record behind.");
+
+                // Pending and Locked are refused by the same rule, because the check requires Active
+                // rather than naming the states that are not. A check written the other way round is
+                // what let the reserve path through in the first place (the DEF-20 pattern).
+                Assert.IsTrue(db.SetAccountStatus(1, "Pending"));
+                Assert.IsFalse(actions.ReserveBook(bookId: 8, memberId: 1).Success,
+                    "A Pending account must not be able to reserve.");
+
+                Assert.IsTrue(db.SetAccountStatus(1, "Locked"));
+                Assert.IsFalse(actions.ReserveBook(bookId: 8, memberId: 1).Success,
+                    "A Locked account must not be able to reserve.");
+
+                // A staff account is not a member and must be refused on both paths (REQ-7).
+                Assert.IsFalse(actions.ReserveBook(bookId: 8, memberId: 6).Success,
+                    "A Staff account must not be able to reserve.");
+                Assert.IsFalse(actions.BorrowBook(bookId: 2, memberId: 6).Success,
+                    "A Staff account must not be able to borrow.");
+
+                // Restoring the account restores both actions.
+                Assert.IsTrue(db.SetAccountStatus(1, "Active"));
+                Assert.IsTrue(actions.ReserveBook(bookId: 8, memberId: 1).Success,
+                    "Reactivating the account must restore the ability to reserve.");
+            }
+        }
     }
 }

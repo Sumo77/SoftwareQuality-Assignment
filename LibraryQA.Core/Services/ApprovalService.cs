@@ -22,7 +22,9 @@ namespace LibraryQA.Core.Services
                 bool success = db.ApproveLoan(loanId);
                 return success
                     ? new ApprovalResult { Success = true, Message = "Loan approved." }
-                    : new ApprovalResult { Success = false, Message = "Unable to approve the loan request. It may no longer be pending." };
+                    // DEF-21: approval is also refused when the book is no longer Available, so the
+                    // message covers both reasons rather than naming only the request's status.
+                    : new ApprovalResult { Success = false, Message = "Unable to approve the loan request. It may no longer be pending, or the item may no longer be available." };
             }
         }
 

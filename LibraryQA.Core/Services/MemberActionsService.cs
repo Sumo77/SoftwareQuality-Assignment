@@ -13,6 +13,10 @@ namespace LibraryQA.Core.Services
 
         private const int LoanPeriodDays = 14;
 
+        private const string MemberRole = "Member";
+        private const string ActiveStatus = "Active";
+        private const string SuspendedStatus = "Suspended";
+
         public MemberActionsService(string connectionString) // Initialise Database Access Connection
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
@@ -22,20 +26,11 @@ namespace LibraryQA.Core.Services
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
-                var account = db.GetAccountInfo(memberId);
+                string? refusal = RefusalReason(db, memberId, "borrow items");
 
-                if (account == null)
+                if (refusal != null)
                 {
-                    return new BorrowResult { Success = false, Message = $"No member found with ID {memberId}." };
-                }
-
-                if (!string.Equals(account["Role"]?.ToString(), "Member", StringComparison.OrdinalIgnoreCase))
-                {
-                    return new BorrowResult { Success = false, Message = $"Account {memberId} is not a Member account and cannot borrow items." };
-                }
-                if (string.Equals(account["AccountStatus"]?.ToString(), "Suspended", StringComparison.OrdinalIgnoreCase))
-                {
-                    return new BorrowResult { Success = false, Message = $"Account {memberId} is suspended and cannot borrow items." };
+                    return new BorrowResult { Success = false, Message = refusal };
                 }
 
                 var book = db.GetBookById(bookId);
@@ -82,6 +77,15 @@ namespace LibraryQA.Core.Services
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
+                // DEF-22: the same account check BorrowBook makes. Reserving had none at all, so a
+                // member suspended mid-session could still place a hold (REQ-7, REQ-19).
+                string? refusal = RefusalReason(db, memberId, "reserve items");
+
+                if (refusal != null)
+                {
+                    return new ReserveResult { Success = false, Message = refusal };
+                }
+
                 var book = db.GetBookById(bookId);
 
                 if (book == null) // Check if book exists
@@ -133,6 +137,39 @@ namespace LibraryQA.Core.Services
 
                 return new ReserveResult { Success = true, Message = "Your request to reserve the book has been submitted and is pending staff approval." };
             }
+        }
+
+        // DEF-22: one account check for both borrowing and reserving. It requires the account to be
+        // Active rather than listing the states that are not, so Pending and Locked accounts cannot
+        // slip through the way a Suspended one did on the reserve path. Returns null when the member
+        // may act, otherwise the reason to show them (REQ-7, REQ-19, REQ-13).
+        private static string? RefusalReason(DatabaseHelper db, int memberId, string action)
+        {
+            var account = db.GetAccountInfo(memberId);
+
+            if (account == null)
+            {
+                return $"No member found with ID {memberId}.";
+            }
+
+            if (!string.Equals(account["Role"]?.ToString(), MemberRole, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Account {memberId} is not a Member account and cannot {action}.";
+            }
+
+            string status = account["AccountStatus"]?.ToString() ?? string.Empty;
+
+            if (string.Equals(status, SuspendedStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Account {memberId} is suspended and cannot {action}.";
+            }
+
+            if (!string.Equals(status, ActiveStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"Account {memberId} is not active and cannot {action}.";
+            }
+
+            return null;
         }
     }
 }

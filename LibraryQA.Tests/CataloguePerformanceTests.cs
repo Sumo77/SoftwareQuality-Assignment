@@ -2,22 +2,23 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using LibraryQA.Core.Database;
+using LibraryQA.Core.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace LibraryQA.Tests
 {
     [TestClass]
-    // Catalogue search performance against REQ-15, measured on a generated 5,000-book catalogue.
+    // Performance against REQ-15, measured on a generated 5,000-book catalogue: catalogue search,
+    // the staff dashboard refresh, and staff catalogue management.
     // The timings printed here are the evidence for Task 7.
     public class CataloguePerformanceTests
     {
         private const int GeneratedBookCount = 5000;
 
-        // Deliberately generous. REQ-15 asks for "near real time"; this asserts the search has not
-        // become pathologically slow, while the printed timing is what gets reported in Task 7.
-        // A shared CI runner is slower than a local machine, so a tight bound would flake.
         private const int SearchBudgetMilliseconds = 2000;
+        private const int DashboardBudgetMilliseconds = 2000;
+        private const int CatalogueWriteBudgetMilliseconds = 2000;
 
         private string _dbPath = string.Empty;
         private string _connectionString = string.Empty;
