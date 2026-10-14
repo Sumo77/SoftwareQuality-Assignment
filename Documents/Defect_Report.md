@@ -633,6 +633,95 @@ The suspension message is now shown only after the password is verified, via IsS
 ---
 
 
+## DEF-21
+
+| | |
+|---|---|
+| **Title** | Two members can be loaned the same book at once |
+| **Severity** | High |
+| **Priority** | P1 |
+| **Status** | Closed |
+| **Found by** | Summer (code review) |
+| **Found in** | `DatabaseHelper.CreateLoanRequest`, `DatabaseHelper.ApproveLoan`, `DatabaseSchema.sql` (Loans table) |
+| **Related** | REQ-2a (Borrow), REQ-14 (Integrity), REQ-18 (Loan and Reservation Approval) |
+
+**Description:**
+
+REQ-18 holds a loan request as "Pending" and deliberately does not change the book's status until staff approve it. CreateLoanRequest only checked that the book was "Available", so a second member's request for the same book also passed that check. ApproveLoan then only checked that the request was still Pending, never re-checking the book, and set the status to "On Loan" unconditionally. Approving both requests left one book with two active, unreturned loans.
+
+Reproduced against the real schema and sample data: two pending requests on BookID 1, both approved, two rows returned for that book with Status 'Active' and no ReturnDate.
+
+**Root cause:**
+
+The guard was written against the A1 assumption recorded in the schema comment, that a NULL ReturnDate identifies an active loan and that a book's status therefore shows whether it is claimed. Adding the Pending state in REQ-18 made both statements untrue, and no existing test covered two requests for one book. The reservation side was protected by a database constraint; the loan side had only the application check that REQ-18 undermined.
+
+**Fix:**
+
+Three changes. A partial unique index, `idx_loans_active_book`, now enforces one live loan per book at the database level, mirroring `idx_reservations_active_book`; returned loans carry a ReturnDate and are excluded, so loan history is kept. `HasLiveLoan()` was added and is checked inside CreateLoanRequest's transaction, with the same constraint-violation handler CreateReservationRequest already used. ApproveLoan's lookup now joins Books and requires the book to still be Available, so a stale request is refused rather than approved on top of a live loan.
+
+Covered by TC-91, TC-92 and TC-93. TC-93 exists to prove the guard does not over-reach: a returned book can still be borrowed again.
+
+---
+
+## DEF-22
+
+| | |
+|---|---|
+| **Title** | A suspended member can still place a reservation |
+| **Severity** | Medium |
+| **Priority** | P1 |
+| **Status** | Closed |
+| **Found by** | Summer (code review) |
+| **Found in** | `MemberActionsService.ReserveBook` |
+| **Related** | REQ-7 (Access Control), REQ-19 (Member Suspension) |
+
+**Description:**
+
+BorrowBook checked the account's role and refused a suspended member. ReserveBook performed no account check at all, so a member suspended by staff while their session was open could still place a hold. Borrowing was refused and reserving was not.
+
+BorrowBook's own check also tested for `AccountStatus == "Suspended"` rather than requiring "Active", so Pending and Locked accounts would have passed it. Not reachable through the interface, because Authenticate admits only Active accounts, but the same shape of mistake as DEF-20.
+
+**Root cause:**
+
+The account check was written inside BorrowBook when that was the only path that needed it, and was not extracted when ReserveBook was added. Naming the states to refuse, rather than requiring the one state that is allowed, meant every new account status had to be remembered in every check.
+
+**Fix:**
+
+The check moved into one private method, `RefusalReason`, called by both BorrowBook and ReserveBook. It requires `AccountStatus == "Active"` rather than listing the states that are not, so Pending and Locked are refused without being named. Covered by TC-96, which pairs with TC-14: TC-14 makes the same ReserveBook call and expects it to succeed, so the only difference is the account's status.
+
+---
+
+## DEF-23
+
+| | |
+|---|---|
+| **Title** | Account state is held in two columns, only one of which is maintained |
+| **Severity** | Low |
+| **Priority** | P3 |
+| **Status** | Closed |
+| **Found by** | Summer (code review) |
+| **Found in** | `DatabaseSchema.sql` (Accounts table), `DatabaseHelper.cs`, `DatabaseHelper.MemberLookup.cs` |
+| **Related** | REQ-13 (Maintainability) |
+
+**Description:**
+
+`Accounts.IsActive`, carried over from Assessment 1, was read in seven queries and written by nothing. SetAccountStatus and UnlockAccount only write AccountStatus, and CreateAccount never set IsActive, so the column sat permanently at its default of 1.
+
+Nothing was broken, but "may this account be used?" had two answers in the schema. Setting IsActive to 0 would have produced an account invisible to login and to every staff list while AccountStatus still read "Active" - a state no screen could explain.
+
+**Root cause:**
+
+AccountStatus was added for REQ-16, REQ-19 and REQ-21 without removing the flag it superseded. The same duplication as DEF-08, in the schema rather than in code: REQ-13 asks for each rule in exactly one location, and this one had two.
+
+**Fix:**
+
+The IsActive column was removed from DatabaseSchema.sql and the seven `IsActive = 1` clauses deleted, leaving AccountStatus as the single source of truth. No test referenced the column and the seed data never set it.
+
+No new test case. This is a duplication removal with no behavioural change, so the evidence is that all 90 existing tests still pass - the same way DEF-08 was verified through TC-8.
+
+---
+
+
 ## Summary
 
 | ID | Title | Severity | Priority | Status |
@@ -657,3 +746,6 @@ The suspension message is now shown only after the password is verified, via IsS
 | DEF-18 | Tests fail with a confusing error if the database cannot be created | Medium | P1 | Closed |
 | DEF-19 | Suspend and Reactivate report success even when the database update fails | Medium | P1 | Closed |
 | DEF-20 | Login screen reveals that a suspended account exists before any password check | Medium | P1 | Closed |
+| DEF-21 | Two members can be loaned the same book at once | High | P1 | Closed |
+| DEF-22 | A suspended member can still place a reservation | Medium | P1 | Closed |
+| DEF-23 | Account state is held in two columns, only one of which is maintained | Low | P3 | Closed |
