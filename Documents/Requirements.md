@@ -95,7 +95,7 @@ The system shall automatically ‘cancel’ a reservation if the reserved item i
 
 ### REQ-21 – Login Lockout (New)
 
-The system shall ‘lock’ (suspend) a login account after 5 consecutive failed login attempts, access is denied on any further attempt, including one with the correct password. It stays 'locked' until staff unlock the account from their portal using the corresponding button(s) to update account status field (Active / Pending / Suspended / Locked).
+The system shall ‘lock’ a login account after 5 consecutive failed login attempts. Access is denied on any further attempt, including one with the correct password. It stays 'locked' until staff unlock the account from their portal using the corresponding button(s) to update account status field (Active / Pending / Suspended / Locked).
 
 **Acceptance Criteria:**
 - Given a login account has 4 consecutive failed attempts, when a 5th attempt also fails, then the account is locked and further login attempts are denied.

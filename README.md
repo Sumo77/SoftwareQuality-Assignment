@@ -103,7 +103,7 @@ For example, Alice has one active loan, Bob is at the
 two-item loan limit with one item overdue, and Carol has an active reservation.
 
 Note that `App.xaml.cs` only seeds when no `library.db` exists or `Accounts` is empty.
-If `library.db` is already present, an older seed is reused - delete it and rerun to pick up changes to `SampleData.sql`.
+If `library.db` is already present, an older seed is reused - delete it and rerun to pick up changes to `SampleData.sql` or to create a fresh file.
 
 ---
 
