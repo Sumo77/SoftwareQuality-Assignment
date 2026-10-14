@@ -3,12 +3,8 @@ using System.Collections.Generic;
 
 namespace LibraryQA.Core.Services
 {
-    // REQ-17: Overdue Notices. The wording of the notice lives in one place so the member screen
-    // and the staff dashboard describe the same situation identically (REQ-13), and it is built
-    // from the caller's loan rows rather than from its own query, which keeps it unit testable.
-    //
-    // A notice stops on its own once the item is returned: both callers pass loans that are still
-    // open, and a returned loan is no longer in that list.
+    // REQ-17: builds the notice from the caller's loan rows, so both screens word it identically
+    // (REQ-13) and it stays unit testable. A returned loan leaves the list, so the notice stops.
     public static class OverdueNotice
     {
         // The notice shown to a member when they log in, or null when nothing of theirs is overdue.
@@ -76,7 +72,7 @@ namespace LibraryQA.Core.Services
                 : $"{overdueCount} items are overdue across all members.";
         }
 
-        private static string DayCount(int days)
+        private static string DayCount(int days) // "1 day" or "n days"
         {
             return days == 1 ? "1 day" : $"{days} days";
         }

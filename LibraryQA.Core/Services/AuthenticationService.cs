@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Security.Cryptography;
 using System.Text;
 using LibraryQA.Core.Database;
@@ -17,7 +17,7 @@ namespace LibraryQA.Core.Services
 
         private readonly string _connectionString;
 
-        public AuthenticationService(string connectionString)
+        public AuthenticationService(string connectionString) // Initialise database access
         {
             _connectionString = connectionString
                 ?? throw new ArgumentNullException(nameof(connectionString));
@@ -53,9 +53,8 @@ namespace LibraryQA.Core.Services
             }
         }
 
-        // REQ-21: records a failed attempt against a known, active account and locks it at the
-        // threshold. An unknown username is ignored, so the lockout cannot be used to discover
-        // which usernames exist, and a Pending or Suspended account is left as it is.
+        // REQ-21: counts a failed attempt and locks at the threshold. An unknown username is ignored
+        // so the lockout cannot reveal which accounts exist; Pending and Suspended are left alone.
         private static void CountFailedAttempt(DatabaseHelper db, string username)
         {
             int? accountId = db.GetAccountIdByUsername(username);
@@ -74,9 +73,8 @@ namespace LibraryQA.Core.Services
             }
         }
 
-        // Returns the account's status, but only once the password has been verified, so the login
-        // screen can explain a refusal without revealing that an account exists (REQ-11, DEF-20).
-        // Null means the credentials themselves were wrong.
+        // Returns the status only once the password is verified, so a refusal can be explained
+        // without revealing that the account exists (REQ-11, DEF-20). Null means bad credentials.
         public string? GetStatusWithValidCredentials(string username, string password)
         {
             if (string.IsNullOrWhiteSpace(username) || string.IsNullOrEmpty(password))
@@ -99,7 +97,7 @@ namespace LibraryQA.Core.Services
                 SuspendedStatus, StringComparison.OrdinalIgnoreCase);
         }
 
-        public static string HashPassword(string password) // Hash the password using SHA256 for secure comparison with stored hashes
+        public static string HashPassword(string password) // SHA256, to compare against the stored hash (REQ-11)
         {
             if (password == null) throw new ArgumentNullException(nameof(password));
 

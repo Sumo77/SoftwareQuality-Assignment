@@ -3,17 +3,15 @@ using LibraryQA.Core.Database;
 
 namespace LibraryQA.Core.Services
 {
-    // REQ-20: Reservation Expiry - an uncollected reservation is cancelled after 5 days of the
-    // item becoming available, returning the item's status to "Available". This is run lazily
-    // (on login / view load) rather than via a background job, so the behaviour stays testable
-    // and deterministic.
+    // REQ-20: cancels a reservation left uncollected for 5 days and frees the item.
+    // Run on view load rather than as a background job, which keeps it deterministic and testable.
     public class ReservationExpiryService
     {
         public const int ReservationExpiryDays = 5;
 
         private readonly string _connectionString;
 
-        public ReservationExpiryService(string connectionString)
+        public ReservationExpiryService(string connectionString) // Initialise database access
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }

@@ -10,10 +10,8 @@ namespace LibraryQA.Core.Services
         public int? AccountId { get; init; }
     }
 
-    // REQ-16: Account Creation. A new member chooses a unique username and a password, which is
-    // stored hashed, and the account is created Pending so library staff must activate it before
-    // it can be used. All the validation lives here rather than in the view, so the same rules
-    // apply however the account is created (REQ-9, REQ-13).
+    // REQ-16: creates a member account with a hashed password, Pending until staff activate it.
+    // Validation lives here, not the view, so the rules hold however an account is made (REQ-9, REQ-13).
     public class RegistrationService
     {
         public const int MinimumUsernameLength = 3;
@@ -25,14 +23,14 @@ namespace LibraryQA.Core.Services
 
         private readonly string _connectionString;
 
-        public RegistrationService(string connectionString)
+        public RegistrationService(string connectionString) // Initialise database access
         {
             _connectionString = connectionString
                 ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
         public RegistrationResult Register(string username, string password, string firstName,
-            string lastName, string? email = null, string? phoneNumber = null)
+            string lastName, string? email = null, string? phoneNumber = null) // Create a Pending member account (REQ-16)
         {
             username = (username ?? string.Empty).Trim();
             firstName = (firstName ?? string.Empty).Trim();
@@ -117,7 +115,7 @@ namespace LibraryQA.Core.Services
             }
         }
 
-        private static bool IsAllowedUsername(string username)
+        private static bool IsAllowedUsername(string username) // Letters, digits and a few separators only
         {
             foreach (char character in username)
             {
@@ -165,7 +163,7 @@ namespace LibraryQA.Core.Services
             return digits >= 6;
         }
 
-        private static RegistrationResult Rejected(string message)
+        private static RegistrationResult Rejected(string message) // A refusal with the reason to show the user
         {
             return new RegistrationResult { Success = false, Message = message };
         }

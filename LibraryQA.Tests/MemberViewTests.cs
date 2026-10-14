@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using LibraryQA.Core.Database;
 using LibraryQA.Core.Services;
@@ -16,7 +16,7 @@ namespace LibraryQA.Tests
         private MemberActionsService _service = null!;
 
         [TestInitialize]
-        public void Setup() // Setup the tests
+        public void Setup() // Build a fresh database for this test
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"membertest_{Guid.NewGuid()}.db");
@@ -31,7 +31,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup() // Cleans/Deletes the tests
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
@@ -175,7 +175,6 @@ namespace LibraryQA.Tests
                     "A rejected reservation must not be written to the database.");
             }
         }
-
         // TC-97: The 2-item limit permits exactly two and refuses the third with a message naming the
         // limit, and returning an item releases the allowance again (REQ-8)
         [TestMethod]
@@ -183,10 +182,8 @@ namespace LibraryQA.Tests
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
-                // Alice (MemberID 1) starts with one active loan, LoanID 3 on BookID 7, so she has
-                // one of her two allowances left. TC-10 covers a member who is already at the limit;
-                // this covers the boundary itself - that the second item is permitted, not just that
-                // the third is refused.
+                // Alice (1) starts with one loan, LoanID 3 on BookID 7. TC-10 covers a member already at
+                // the limit; this covers the boundary - that the second item is permitted.
                 Assert.AreEqual(1, db.GetActiveOrPendingCount(1),
                     "Precondition check: Alice should start with one item.");
 
@@ -214,5 +211,6 @@ namespace LibraryQA.Tests
                     "Returning an item must release the allowance it was using.");
             }
         }
+
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
@@ -13,9 +13,8 @@ namespace LibraryQA.Views
         Error
     }
 
-    // Single place where user-facing messages are formatted and displayed (DEF-04, REQ-10, REQ-12).
-    // Every view calls this instead of building its own strings or opening a MessageBox, so the
-    // same kind of event looks and reads the same way on every screen (REQ-13).
+    // The one place user-facing messages are worded and formatted (DEF-04, REQ-10, REQ-12). Every
+    // view calls this rather than building its own strings, so every screen reads alike (REQ-13).
     public static class UserMessage
     {
         // Severity is carried by a symbol as well as by colour, so meaning never relies on colour alone.
@@ -24,6 +23,7 @@ namespace LibraryQA.Views
         private const string WarningSymbol = "\u26A0"; // warning triangle
         private const string ErrorSymbol = "\u2716";   // cross
 
+        // Severity colours, chosen to stay readable alongside the symbols above
         private static readonly Brush SuccessBrush = FrozenBrush(Color.FromRgb(0x1B, 0x5E, 0x20));
         private static readonly Brush InfoBrush = FrozenBrush(Color.FromRgb(0x0D, 0x47, 0xA1));
         private static readonly Brush WarningBrush = FrozenBrush(Color.FromRgb(0x8A, 0x50, 0x00));
@@ -50,9 +50,8 @@ namespace LibraryQA.Views
         public const string AccountLocked =
             "This account has been locked after too many failed login attempts. Please contact the Library Staff.";
 
-        // Shown on a rejected login. Deliberately gives no count of remaining attempts and no hint
-        // that the username exists - a countdown would confirm an account to an attacker, which is
-        // the leak DEF-20 closed (REQ-11, REQ-21).
+        // Shown on a rejected login. Deliberately gives no attempt count: a countdown would confirm
+        // that an account exists, which is the leak DEF-20 closed (REQ-11, REQ-21).
         public const string InvalidCredentialsWithLockoutWarning =
             InvalidCredentials + " Repeated failed attempts will lock the account.";
 
@@ -81,33 +80,32 @@ namespace LibraryQA.Views
             target.Visibility = Visibility.Collapsed;
         }
 
-        // Standard wordings (DEF-12, REQ-9).
-        // Validation messages name the field at fault rather than describing the whole form,
-        // and live here so every view words the same situation identically.
+        // Standard wordings (DEF-12, REQ-9). Validation names the field at fault rather than
+        // describing the whole form, and lives here so every view words it identically.
 
         public static string FieldMustBeANumber(string fieldName)
         {
             return $"{fieldName} must be a number.";
         }
 
-        public static string FieldIsRequired(string fieldName)
+        public static string FieldIsRequired(string fieldName) // "Please enter a ..."
         {
             return $"Please enter a {fieldName}.";
         }
 
-        public static string NothingSelected(string itemDescription)
+        public static string NothingSelected(string itemDescription) // "Please select a ..."
         {
             return $"Please select a {itemDescription} first.";
         }
 
-        private static Brush FrozenBrush(Color colour)
+        private static Brush FrozenBrush(Color colour) // A brush that can be shared across threads
         {
             var brush = new SolidColorBrush(colour);
             brush.Freeze();
             return brush;
         }
 
-        private static string SymbolFor(MessageKind kind)
+        private static string SymbolFor(MessageKind kind) // Severity symbol, so meaning is not colour alone
         {
             return kind switch
             {
@@ -118,7 +116,7 @@ namespace LibraryQA.Views
             };
         }
 
-        private static Brush BrushFor(MessageKind kind)
+        private static Brush BrushFor(MessageKind kind) // Colour for each severity
         {
             return kind switch
             {

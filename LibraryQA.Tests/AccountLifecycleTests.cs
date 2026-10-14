@@ -18,7 +18,7 @@ namespace LibraryQA.Tests
         private RegistrationService _registration = null!;
 
         [TestInitialize]
-        public void Setup() // Setup the tests
+        public void Setup() // Build a fresh database for this test
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"accounttest_{Guid.NewGuid()}.db");
@@ -34,7 +34,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup() // Cleans/Deletes the tests
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
@@ -295,10 +295,8 @@ namespace LibraryQA.Tests
                 Assert.AreEqual(0, db.GetFailedLoginAttempts(accountId.Value));
             }
         }
-
         // TC-96: A member who is not Active can neither borrow nor reserve. Reserving had no account
-        // check at all, so a member suspended during an open session could still place a hold
-        // (REQ-7, REQ-19, DEF-22)
+        // check at all, so a member suspended mid-session could still place a hold (REQ-7, REQ-19, DEF-22)
         [TestMethod]
         public void MemberActions_AccountNotActive_RefusesBothBorrowingAndReserving()
         {
@@ -306,9 +304,8 @@ namespace LibraryQA.Tests
 
             using (var db = new DatabaseHelper(_connectionString))
             {
-                // Alice (AccountID 1) holds one item, so she is under the limit, and BookID 8 is on
-                // loan to someone else with no hold against it. TC-14 makes this exact call and
-                // expects it to succeed, so the only thing changing here is her account status.
+                // Alice (1) is under the limit and BookID 8 is on loan with no hold. TC-14 makes this
+                // exact call and expects success, so the only thing changing here is her status.
                 Assert.IsTrue(db.SetAccountStatus(1, "Suspended"));
 
                 var borrow = actions.BorrowBook(bookId: 2, memberId: 1);
@@ -319,12 +316,11 @@ namespace LibraryQA.Tests
                 Assert.IsFalse(reserve.Success, "A suspended member must not be able to reserve either.");
                 StringAssert.Contains(reserve.Message, "suspended");
 
-                Assert.AreEqual(0, db.GetActiveReservations(1).Count,
+                Assert.IsEmpty(db.GetActiveReservations(1),
                     "A refused reservation must leave no record behind.");
 
                 // Pending and Locked are refused by the same rule, because the check requires Active
-                // rather than naming the states that are not. A check written the other way round is
-                // what let the reserve path through in the first place (the DEF-20 pattern).
+                // rather than naming the states that are not - the mistake DEF-20 was also about.
                 Assert.IsTrue(db.SetAccountStatus(1, "Pending"));
                 Assert.IsFalse(actions.ReserveBook(bookId: 8, memberId: 1).Success,
                     "A Pending account must not be able to reserve.");
@@ -345,5 +341,6 @@ namespace LibraryQA.Tests
                     "Reactivating the account must restore the ability to reserve.");
             }
         }
+
     }
 }

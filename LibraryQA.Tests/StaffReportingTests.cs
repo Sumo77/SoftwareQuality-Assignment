@@ -9,11 +9,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace LibraryQA.Tests
 {
     [TestClass]
-    // REQ-6 (Staff Portal) reporting. The requirement promises staff four figures - items on loan,
-    // overdue items, active reservations and the most frequently borrowed titles - and the two
-    // methods behind them, GetStaffStatistics and GetMostBorrowedBooks, had no test coverage at all.
-    // Expected counts are taken from the seed file by hand rather than recomputed with the same
-    // production queries under test, so a fault cannot move expected and actual together (DEF-17).
+    // REQ-6 reporting: the four figures staff are promised, via GetStaffStatistics and
+    // GetMostBorrowedBooks. Counts are hand-taken from the seed, not recomputed (DEF-17).
     public class StaffReportingTests
     {
         private string _dbPath = string.Empty;
@@ -21,7 +18,7 @@ namespace LibraryQA.Tests
         private ApprovalService _approvalService = null!;
 
         [TestInitialize]
-        public void Setup()
+        public void Setup() // Build a fresh database for this test
         {
             _dbPath = Path.Combine(Path.GetTempPath(), $"staffreporttest_{Guid.NewGuid()}.db");
 
@@ -35,7 +32,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup()
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
@@ -59,9 +56,8 @@ namespace LibraryQA.Tests
             Assert.AreEqual(31, stats["TotalBooks"]);
             Assert.AreEqual(25, stats["AvailableBooks"]);
 
-            // DEF-09 boundary: LoanID 8 falls due today, which is not yet overdue. Rolling the
-            // supplied date forward one day must tip exactly that one loan over, which proves the
-            // count follows the caller's date and not date('now') inside SQL.
+            // DEF-09 boundary: LoanID 8 falls due today, so moving the supplied date forward a day must
+            // tip exactly that one loan over - proof the count follows the caller, not SQL's UTC date.
             Assert.AreEqual(4, db.GetStaffStatistics(DateTime.Today.AddDays(1))["TotalOverdue"],
                 "A loan due today must become overdue tomorrow, and only that one.");
 
@@ -83,9 +79,8 @@ namespace LibraryQA.Tests
             Assert.AreEqual(26, afterReturn["AvailableBooks"], "The returned book must be available again.");
         }
 
-        // TC-95: The most-borrowed report ranks titles by how often they have been borrowed, counts
-        // closed loans as well as current ones, honours the requested limit, and omits titles that
-        // have never been borrowed (REQ-6)
+        // TC-95: The most-borrowed report ranks by borrow count, counts closed loans, honours the
+        // limit, and omits titles never borrowed (REQ-6)
         [TestMethod]
         public void GetMostBorrowedBooks_RanksByBorrowCountAndExcludesNeverBorrowedTitles()
         {
@@ -122,7 +117,7 @@ namespace LibraryQA.Tests
             Assert.IsFalse(ranked.Any(b => Convert.ToInt32(b["BookID"]) == 4),
                 "A title with no loan records must be absent from the most-borrowed report.");
 
-            Assert.AreEqual(3, db.GetMostBorrowedBooks(topN: 3).Count, "The requested limit must be honoured.");
+            Assert.HasCount(3, db.GetMostBorrowedBooks(topN: 3), "The requested limit must be honoured.");
         }
     }
 }

@@ -18,7 +18,7 @@ namespace LibraryQA.Tests
         private string _connectionString = string.Empty;
 
         [TestInitialize]
-        public void Setup() // Setup the tests
+        public void Setup() // Build a fresh database for this test
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"staffviewtest_{Guid.NewGuid()}.db");
@@ -32,7 +32,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup() // Cleans/Deletes the tests
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
@@ -100,9 +100,8 @@ namespace LibraryQA.Tests
                 // The recorded return date should fall within the window the call was made, so the return is processed close to real time.
                 Assert.IsTrue(returnDate.Date >= beforeCall.Date && returnDate.Date <= afterCall.Date);
 
-                // Hardcoded rather than recomputed with HasActiveReservation: Check Loan 3's book has an
-                // unfulfilled reservation in the seed data, and reusing the call ProcessReturn relies
-                // on would let a fault in that shared logic go undetected (DEF-17).
+                // Hardcoded rather than recomputed with HasActiveReservation - reusing the call
+                // ProcessReturn relies on would hide a fault in that shared logic (DEF-17).
                 Assert.AreEqual(7, bookId, "Precondition check: loan 3 is on book 7.");
 
                 var book = db.GetBookById(bookId);

@@ -17,7 +17,7 @@ namespace LibraryQA.Core.Services
         private const string ActiveStatus = "Active";
         private const string SuspendedStatus = "Suspended";
 
-        public MemberActionsService(string connectionString) // Initialise Database Access Connection
+        public MemberActionsService(string connectionString) // Initialise database access
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
@@ -35,7 +35,7 @@ namespace LibraryQA.Core.Services
 
                 var book = db.GetBookById(bookId);
 
-                if (book == null) // Check if book exists
+                if (book == null)
                 {
                     return new BorrowResult { Success = false, Message = "Book not found." };
                 }
@@ -77,8 +77,7 @@ namespace LibraryQA.Core.Services
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
-                // DEF-22: the same account check BorrowBook makes. Reserving had none at all, so a
-                // member suspended mid-session could still place a hold (REQ-7, REQ-19).
+                // DEF-22: reserving had no account check, so a suspended member could still hold
                 string? refusal = RefusalReason(db, memberId, "reserve items");
 
                 if (refusal != null)
@@ -121,9 +120,8 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult { Success = false, Message = "The borrowing limit has been reached - Maximum " + MaxActiveLoans + " books can be borrowed or reserved at a time." };
                 }
 
-                // REQ-18: the reservation request is held as "Pending" until a staff member approves or rejects it.
-                // The book's status is not changed until approval - ApproveReservation and ProcessReturn
-                // are responsible for promoting the catalogue status once the request is active.
+                // REQ-18: held "Pending" until staff act. The status is not changed here -
+                // ApproveReservation and ProcessReturn promote it once the request is active.
                 int? reservationId = db.CreateReservationRequest(bookId, memberId, DateTime.Today);
 
                 if (reservationId == null) // Check if reservation request was successful
@@ -139,10 +137,8 @@ namespace LibraryQA.Core.Services
             }
         }
 
-        // DEF-22: one account check for both borrowing and reserving. It requires the account to be
-        // Active rather than listing the states that are not, so Pending and Locked accounts cannot
-        // slip through the way a Suspended one did on the reserve path. Returns null when the member
-        // may act, otherwise the reason to show them (REQ-7, REQ-19, REQ-13).
+        // DEF-22: the one account check for borrowing and reserving; requires Active rather than
+        // listing the states that are not. Null means the member may act (REQ-7, REQ-19).
         private static string? RefusalReason(DatabaseHelper db, int memberId, string action)
         {
             var account = db.GetAccountInfo(memberId);

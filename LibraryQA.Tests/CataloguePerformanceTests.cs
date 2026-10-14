@@ -9,14 +9,17 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace LibraryQA.Tests
 {
     [TestClass]
-    // Performance against REQ-15, measured on a generated 5,000-book catalogue: catalogue search,
-    // the staff dashboard refresh, and staff catalogue management.
-    // The timings printed here are the evidence for Task 7.
+    // Performance against REQ-15 on a generated 5,000-book catalogue: catalogue search, the staff
+    // dashboard refresh and catalogue management. The printed timings are the evidence for Task 7.
     public class CataloguePerformanceTests
     {
         private const int GeneratedBookCount = 5000;
 
+        // Deliberately generous: this catches a pathological regression, not a slow CI runner.
+        // The printed timing, not this bound, is what REQ-15 is reported against.
         private const int SearchBudgetMilliseconds = 2000;
+
+        // Same reasoning as SearchBudgetMilliseconds.
         private const int DashboardBudgetMilliseconds = 2000;
         private const int CatalogueWriteBudgetMilliseconds = 2000;
 
@@ -24,7 +27,7 @@ namespace LibraryQA.Tests
         private string _connectionString = string.Empty;
 
         [TestInitialize]
-        public void Setup()
+        public void Setup() // Build a fresh database for this test
         {
             _dbPath = Path.Combine(Path.GetTempPath(), $"perftest_{Guid.NewGuid()}.db");
 
@@ -37,7 +40,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup()
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath))
@@ -107,11 +110,8 @@ narrowTimer.ElapsedMilliseconds, $"Narrow catalogue search took {narrowTimer.Ela
                     "Removing generated books must not remove any seeded book.");
             }
         }
-
-        // TC-98: The staff dashboard stays responsive on a 5,000-book catalogue (REQ-15, REQ-6)
-        // Every staff action calls RefreshAllData(), so these six queries run together far more often
-        // than a catalogue search does. The Books-wide counts and the Books-to-Loans join are what
-        // scale with the catalogue.
+        // TC-98: The staff dashboard stays responsive on a 5,000-book catalogue (REQ-15, REQ-6).
+        // Every staff action refreshes it, and the Books-wide counts and joins are what scale.
         [TestMethod]
         public void StaffDashboard_FiveThousandBooks_CompletesWithinBudget()
         {
@@ -144,11 +144,8 @@ narrowTimer.ElapsedMilliseconds, $"Narrow catalogue search took {narrowTimer.Ela
             }
         }
 
-        // TC-99: Staff catalogue management stays responsive on a 5,000-book catalogue (REQ-15, REQ-1)
-        // The duplicate-ISBN check is the slowest part by design: it compares
-        // UPPER(REPLACE(REPLACE(ISBN, '-', ''), ' ', '')) against every row, which cannot use
-        // idx_books_isbn, so it is a full scan that grows with the catalogue. Worth measuring rather
-        // than assuming.
+        // TC-99: Staff catalogue management stays responsive on a 5,000-book catalogue (REQ-15, REQ-1).
+        // The duplicate-ISBN check wraps ISBN in UPPER/REPLACE, so it cannot use the index and scans.
         [TestMethod]
         public void CatalogueManagement_FiveThousandBooks_CompletesWithinBudget()
         {
@@ -195,5 +192,6 @@ narrowTimer.ElapsedMilliseconds, $"Narrow catalogue search took {narrowTimer.Ela
                     $"Adding a book took {addTimer.ElapsedMilliseconds} ms, over the {CatalogueWriteBudgetMilliseconds} ms budget.");
             }
         }
+
     }
 }

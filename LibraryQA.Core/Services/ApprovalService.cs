@@ -3,32 +3,29 @@ using LibraryQA.Core.Database;
 
 namespace LibraryQA.Core.Services
 {
-    // REQ-18: Loan and Reservation Approval - lets staff approve or reject pending loan/reservation
-    // requests. Approval activates the request and updates the item's catalogue status; rejection
-    // closes the request without changing the item's status.
+    // REQ-18: staff approve or reject pending requests. Approval activates the request and updates
+    // the item's status; rejection closes it and leaves the status alone.
     public class ApprovalService
     {
         private readonly string _connectionString;
 
-        public ApprovalService(string connectionString)
+        public ApprovalService(string connectionString) // Initialise database access
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
 
-        public ApprovalResult ApproveLoan(int loanId)
+        public ApprovalResult ApproveLoan(int loanId) // Activate a pending loan request (REQ-18)
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
                 bool success = db.ApproveLoan(loanId);
                 return success
                     ? new ApprovalResult { Success = true, Message = "Loan approved." }
-                    // DEF-21: approval is also refused when the book is no longer Available, so the
-                    // message covers both reasons rather than naming only the request's status.
                     : new ApprovalResult { Success = false, Message = "Unable to approve the loan request. It may no longer be pending, or the item may no longer be available." };
             }
         }
 
-        public ApprovalResult RejectLoan(int loanId)
+        public ApprovalResult RejectLoan(int loanId) // Close a pending loan request (REQ-18)
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
@@ -39,7 +36,7 @@ namespace LibraryQA.Core.Services
             }
         }
 
-        public ApprovalResult ApproveReservation(int reservationId)
+        public ApprovalResult ApproveReservation(int reservationId) // Activate a pending reservation request (REQ-18)
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
@@ -50,7 +47,7 @@ namespace LibraryQA.Core.Services
             }
         }
 
-        public ApprovalResult RejectReservation(int reservationId)
+        public ApprovalResult RejectReservation(int reservationId) // Close a pending reservation request (REQ-18)
         {
             using (var db = new DatabaseHelper(_connectionString))
             {

@@ -9,11 +9,8 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace LibraryQA.Tests
 {
     [TestClass]
-    // DEF-21: one book, one live loan. REQ-18 holds a loan request as "Pending" without changing
-    // the book's status, which left "is this book Available?" an insufficient guard - two members
-    // could each be queued for the same copy and staff could approve both. These tests pin the
-    // application guard, the database guard behind it, and the fact that neither blocks a legitimate
-    // re-loan after a return (REQ-2a, REQ-14).
+    // DEF-21: one book, one live loan. A "Pending" request leaves the book Available, so that status
+    // was not enough of a guard and two members could both be approved (REQ-2a, REQ-14).
     public class LoanApprovalIntegrityTests
     {
         private string _dbPath = string.Empty;
@@ -22,7 +19,7 @@ namespace LibraryQA.Tests
         private ApprovalService _approvalService = null!;
 
         [TestInitialize]
-        public void Setup()
+        public void Setup() // Build a fresh database for this test
         {
             _dbPath = Path.Combine(Path.GetTempPath(), $"loanintegritytest_{Guid.NewGuid()}.db");
 
@@ -37,7 +34,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup()
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);

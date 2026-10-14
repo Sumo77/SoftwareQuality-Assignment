@@ -25,10 +25,9 @@ DROP TABLE IF EXISTS Accounts;
 -- Stores both Member and Staff accounts with unified structure
 -- Role field determines access level (REQ-7, REQ-11)
 -- Passwords stored as hashed values (basic security)
--- AccountStatus is the single source of truth for whether an account may be used, and
--- supports REQ-16 (Account Creation), REQ-19 (Member Suspension) and REQ-21 (Login Lockout).
--- An earlier IsActive flag duplicated that question and was never maintained, so it was
--- removed rather than left to drift out of step with AccountStatus (DEF-23, REQ-13)
+-- AccountStatus is the single source of truth for whether an account may be used
+-- (REQ-16 Pending, REQ-19 Suspended, REQ-21 Locked). An unmaintained IsActive flag
+-- duplicated it and was removed (DEF-23, REQ-13)
 -- ============================================================================
 CREATE TABLE Accounts (
 	AccountID           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -84,13 +83,11 @@ CREATE INDEX idx_books_isbn ON Books(ISBN);
 -- LOANS TABLE
 -- ============================================================================
 -- Tracks all borrowing transactions (current and historical)
--- A live loan is ReturnDate IS NULL AND Status IN ('Pending', 'Active'). Since REQ-18 added
--- staff approval, a NULL ReturnDate alone is not enough: a Pending request and a Rejected
--- request both have one (DEF-21)
+-- A live loan is ReturnDate IS NULL AND Status IN ('Pending', 'Active') - since REQ-18,
+-- a NULL ReturnDate alone is not enough (DEF-21)
 -- DueDate calculated as LoanDate + 14 days (REQ-2, REQ-4)
--- Overdue status is calculated at query time from a date supplied by the caller, never from
--- date('now') inside SQL, which returns UTC and can be a day behind local time (DEF-09).
--- The rule lives in LibraryQA.Core/Services/OverdueRules.cs (REQ-13)
+-- Overdue is calculated at query time from a date the caller supplies, never date('now'),
+-- which is UTC (DEF-09). The rule lives in OverdueRules.cs (REQ-13)
 -- ============================================================================
 CREATE TABLE Loans (
 	LoanID          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -118,16 +115,13 @@ CREATE INDEX idx_loans_active ON Loans(ReturnDate) WHERE ReturnDate IS NULL;
 -- Index for overdue loan queries (REQ-4, REQ-6)
 CREATE INDEX idx_loans_overdue ON Loans(DueDate, ReturnDate);
 
--- CRITICAL: Enforce a single live loan per book (REQ-2a, REQ-14)
--- Mirrors idx_reservations_active_book below. A 'Pending' request claims the book's
--- availability just as an 'Active' loan does, so both are covered here - without this,
--- two members could each hold a pending request for the same Available book and staff
--- could approve both, leaving one book with two active loans (DEF-21).
--- Returned loans carry a ReturnDate and are excluded, so loan history is preserved and
--- a book can be borrowed again after it comes back.
+-- CRITICAL: one live loan per book (REQ-2a, REQ-14, DEF-21)
+-- Mirrors idx_reservations_active_book. A Pending request claims the book just as an Active
+-- loan does; returned loans have a ReturnDate and are excluded, so history is kept.
 CREATE UNIQUE INDEX idx_loans_active_book
 	ON Loans(BookID)
 	WHERE ReturnDate IS NULL AND Status IN ('Pending', 'Active');
+
 
 -- ============================================================================
 -- RESERVATIONS TABLE

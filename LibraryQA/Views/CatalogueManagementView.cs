@@ -1,4 +1,4 @@
-﻿using LibraryQA.Core.Database;
+using LibraryQA.Core.Database;
 using LibraryQA.Core.Services;
 using Microsoft.Data.Sqlite;
 using System;
@@ -259,7 +259,7 @@ namespace LibraryQA.Views
             FormHeading.Text = row == null ? "Add a new book" : $"Editing: {row.Title} (ID {row.BookId})";
         }
 
-        private class CatalogueRow // Represents a catalogue record for display and editing in the staff interface
+        private class CatalogueRow // A catalogue record shown in the staff list
         {
             public int BookId { get; set; }
             public string Title { get; set; } = "";

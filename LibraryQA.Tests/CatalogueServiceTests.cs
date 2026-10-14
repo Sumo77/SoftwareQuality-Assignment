@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using LibraryQA.Core.Database;
 using LibraryQA.Core.Services;
@@ -16,7 +16,7 @@ namespace LibraryQA.Tests
         private CatalogueService _service = null!;
 
         [TestInitialize]
-        public void Setup() // Setup the tests
+        public void Setup() // Build a fresh database for this test
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"cataloguetest_{Guid.NewGuid()}.db");
@@ -31,7 +31,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup() // Cleans/Deletes the tests
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
@@ -41,7 +41,7 @@ namespace LibraryQA.Tests
         private static BookInput ValidBook(string title = "A New Book", string isbn = "") =>
             new BookInput { Title = title, Author = "Some Author", Isbn = isbn };
 
-        private int CountBooks()
+        private int CountBooks() // How many books the catalogue holds
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
@@ -49,7 +49,7 @@ namespace LibraryQA.Tests
             }
         }
 
-        private int AddValidBook(string title = "A New Book", string isbn = "")
+        private int AddValidBook(string title = "A New Book", string isbn = "") // Add a book and return its ID
         {
             var result = _service.AddBook(ValidBook(title, isbn));
             Assert.IsTrue(result.Success, result.Message);
