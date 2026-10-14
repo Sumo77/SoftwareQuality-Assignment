@@ -1,6 +1,6 @@
 # Library Book Loaning, Returns and Catalogue Management System
 
-A prototype library management system built for the Software Quality Assurance Course (ENSE707) Assignment 1.
+A prototype library management system built for the Software Quality Assurance Course (ENSE707) Assignment 1 and Assignment 2.
 Members can search the catalogue, borrow items and place reservations.
 Staff can issue loans, process returns and view reporting data.
 
@@ -12,11 +12,12 @@ Staff can issue loans, process returns and view reporting data.
 
 | Project | Purpose |
 |---|---|
-| `LibraryQA` | Desktop app - Login, Member and Staff views |
+| `LibraryQA` | Desktop app - Login, Register, Member and Staff views |
 | `LibraryQA.Core` | Business logic and data access. No UI dependency, so it can be unit tested |
 | `LibraryQA.Tests` | MSTest unit tests, references Core only |
 | `Database/` | `DatabaseSchema.sql` and `SampleData.sql` |
-| `Documents/` | Setup guide, defect report, traceability matrix |
+| `Documents/` | Setup Guide, Requirements, Defect Report, Traceability Matrix |
+| `.github/workflows/` | CI pipeline - build, format check, smoke tests, full test suite with coverage, on every push and pull request |
 
 This structure keeps user interface logic (frontend) and business rules and database logic (backend) separate.
 
@@ -24,17 +25,17 @@ This structure keeps user interface logic (frontend) and business rules and data
 
 ## Running the app
 
-Clone the repository, open in a terminal or compatible interface (such as Visual Studio 2022 17.8 or later) and run the `LibraryQA` project (and/or 'Set as Startup Project').
+Clone the repository, open in a terminal or compatible interface (such as Visual Studio 2022 17.13 or later) and run the `LibraryQA` project (and/or 'Set as Startup Project').
 
 Else (optionally), run with the following commands:
 
 ```bash
-git clone https://github.com/Sumo77/SoftwareQuality-Assignment1.git
-cd SoftwareQuality-Assignment1
+git clone https://github.com/Sumo77/SoftwareQuality-Assignment.git
+cd SoftwareQuality-Assignment
 dotnet run --project LibraryQA
 ```
 
-Requires .NET 8 SDK and Windows.
+Requires .NET 9 SDK (9.0.2XX or later) and Windows.
 
 The database is created and seeded automatically on first launch. It is written
 to the app's output folder as `library.db` and reused on later runs. Delete that
@@ -86,29 +87,8 @@ Four Tables: `Accounts`, `Books`, `Loans`, `Reservations`
 |---|---|
 | `Accounts` | Members and staff in one table, with the `Role` column deciding which view a user gets and what they can do |
 | `Books` | The catalogue, with a `Status` column that is the single source of truth for whether an item is available, on loan or reserved |
-| `Loans` | Every borrowing transaction, past and present; a null `ReturnDate` means the loan is still active |
+| `Loans` | Every borrowing transaction, past and present |
 | `Reservations` | Holds placed on items that are currently on loan; a null `FulfilledDate` means the reservation is still waiting |
-
-Two design decisions worth noting:
-
-**`Books.Status` is the single source of truth for availability** - one of
-`Available`, `On Loan` or `Reserved`, enforced by a check constraint. Every
-borrow, return and reservation must keep this in step with the underlying
-records.
-
-**One active reservation per book** is enforced by the database, not by code:
-
-```sql
-CREATE UNIQUE INDEX idx_reservations_active_book
-    ON Reservations(BookID)
-    WHERE FulfilledDate IS NULL;
-```
-
-A second reservation attempt fails with a constraint violation rather
-than relying on system/application checks.
-
-Active loans are rows where `ReturnDate IS NULL`. Overdue status is calculated
-at query time rather than stored, so it is never stale.
 
 ---
 
@@ -117,21 +97,19 @@ at query time rather than stored, so it is never stale.
 The database is populated on first run from `SampleData.sql`. All accounts,
 loans and reservations are fabricated for demonstration and testing - they
 give each account a different starting state so the interfaces have something
-meaningful to display. For example, Alice has one active loan, Bob is at the
+meaningful to display. 
+
+For example, Alice has one active loan, Bob is at the
 two-item loan limit with one item overdue, and Carol has an active reservation.
 
-This data is currently fixed at initialisation and can only be changed by
-editing `SampleData.sql` and recreating the database. Adding or editing
-accounts through the application is planned for the next phase.
-
-Note that `App.xaml.cs` only initialises and populates when no `library.db` exists.
-If the file is already present, an older seed is reused - delete it and rerun
-to pick up changes to `SampleData.sql`.
+Note that `App.xaml.cs` only seeds when no `library.db` exists or `Accounts` is empty.
+If `library.db` is already present, an older seed is reused - delete it and rerun to pick up changes to `SampleData.sql`.
 
 ---
 
 ## Documents
 
 - `Documents/SETUP_GUIDE.md` - setup and troubleshooting
-- `Documents/Traceability_Matrix.md` - requirements mapped to test cases
+- `Documents/Requirements.md` - list and description of all functional and non-functional requirements
 - `Documents/Defect_Report.md` - defects found, status and severity from testing
+- `Documents/Traceability_Matrix.md` - requirements mapped to test cases

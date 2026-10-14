@@ -33,7 +33,7 @@ Defects found during development and testing.
 | **Title** | Database stored password hashes do not match the actual documented passwords |
 | **Severity** | High |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | Original `README.md` + `Database: Accounts Table` |
 | **Related** | REQ-5 + REQ-6 + REQ-7: Member + Staff Views + Access Control, REQ-10 + REQ-11: Usability + Security |
@@ -53,6 +53,7 @@ the documented hash and the actual hash in the database.
 
 Hashes recomputed from the seed file and corrected. Overlapping documents and inputs
 consolidated so there is one place to keep accurate rather than three.
+Covered by TC-1 and TC-2.
 
 ---
 
@@ -63,7 +64,7 @@ consolidated so there is one place to keep accurate rather than three.
 | **Title** | Book status not restored when a loan is returned |
 | **Severity** | High |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Daria |
 | **Found in** | `StaffView.ReturnButton_Click` |
 | **Related** | REQ-2b (Return), REQ-14 (Integrity) |
@@ -89,6 +90,7 @@ reservation exists, and Available otherwise.
 At the time this was fixed, the book status was also being updated twice on 
 borrow and return, meaning the same rule lived in two places. 
 That duplication was tracked separately as DEF-08 and has since been resolved.
+Covered by TC-6.
 
 ---
 
@@ -99,7 +101,7 @@ That duplication was tracked separately as DEF-08 and has since been resolved.
 | **Title** | Reservation is not marked fulfilled when the reserved item is returned |
 | **Severity** | Critical |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | John |
 | **Found in** | `StaffView.ReturnButton_Click` / `Reservations` table |
 | **Related** | REQ-3 (Reservations), REQ-14 (Integrity) |
@@ -123,8 +125,6 @@ return flow.
 
 DatabaseHelper.FulfillReservation() was added. It sets the reservation's FulfilledDate and issues the loan to the collecting member in a single transaction, so the reservation closes and the book moves to On Loan together.
 
-Note: Still outstanding: an automatic expiry if the member never collects (REQ-20). Without it a hold can sit indefinitely. Recorded as a scope limitation rather than reopening this defect. 
-
 Covered by TC-13.
 
 ---
@@ -136,7 +136,7 @@ Covered by TC-13.
 | **Title** | Error presentation is inconsistent across the three interfaces |
 | **Severity** | Low |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `LoginView`, `MemberView`, `StaffView` |
 | **Related** | REQ-10 (Usability), REQ-12 (Reliability) |
@@ -156,7 +156,7 @@ independently. The result is inconsistent, but not incorrect.
 
 **Fix:**
 
-LibraryQA/Views/UserMessage.cs is the single place where user-facing messages are worded and formatted (REQ-13). Severity is carried by a symbol as well as a colour, so meaning does not depend on colour alone. Applied to all three views, now cohesive ! :)
+LibraryQA/Views/UserMessage.cs is the single place where user-facing messages are worded and formatted (REQ-13). Severity is carried by a symbol as well as a colour, so meaning does not depend on colour alone. Applied to all four views (previously three, A2 added RegisterView!), now cohesive ! :)
 
 Defect is view-layer (WPF) and can't be unit tested.
 
@@ -169,7 +169,7 @@ Defect is view-layer (WPF) and can't be unit tested.
 | **Title** | Partially entered sample data |
 | **Severity** | Medium |
 | **Priority** | P2 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `Database` |
 | **Related** | REQ-14 (Integrity) |
@@ -202,7 +202,7 @@ TC-35 asserts that no book status disagrees with its loan and reservation record
 | **Title** | Reserving a book changes it to "Reserved" while still on loan – it should stay "On Loan". |
 | **Severity** | High |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Daria |
 | **Found in** | `MemberActionsService.ReserveBook()` |
 | **Related** | REQ-2 (Borrow) + REQ-3 (Reservations), REQ-14 (Integrity) |
@@ -232,7 +232,7 @@ Covered by TC-14.
 | **Title** | Staff Issue Loan skips the 2-book limit and doesn't check the member ID. |
 | **Severity** | High |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | John |
 | **Found in** | `StaffView.IssueButton_Click` / `DatabaseHelper.CreateLoan` |
 | **Related** | REQ-2a (Borrow), REQ-8 (Loan Limits), REQ-9 (Input Validation) |
@@ -260,7 +260,7 @@ StaffView.IssueButton_Click now calls MemberActionsService.BorrowBook(), so staf
 | **Title** | Book status is updated twice on borrow + return (the same rule lives in two places). |
 | **Severity** | Low |
 | **Priority** | P2 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `MemberActionsService.BorrowBook` + `StaffView.ReturnButton_Click` / `DatabaseHelper.CreateLoan` + `DatabaseHelper.ProcessReturn` |
 | **Related** | REQ-14 (Integrity) |
@@ -289,7 +289,7 @@ Covered by TC-8.
 | **Title** | Overdue checks use UTC, so loans can be flagged a day late; days overdue differs between member + staff views. |
 | **Severity** | High |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `DatabaseHelper.GetActiveLoans` / `DatabaseHelper.GetAllOverdueLoans` (SQL `julianday('now')`) + `MemberView` / `StaffView` (C# local-time calculations) |
 | **Related** | REQ-2b (Return), REQ-12 (Reliability), REQ-4 (Overdue) |
@@ -321,7 +321,7 @@ Covered by TC-30 to TC-34, including the two boundary cases: a loan due today is
 | **Title** | Return condition is never recorded – every return is saved as "Good". |
 | **Severity** | Medium |
 | **Priority** | P2 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | John |
 | **Found in** | `StaffView.ReturnButton_Click` / `DatabaseHelper.ProcessReturn` |
 | **Related** | REQ-2b (Return), REQ-14 (Integrity) |
@@ -348,7 +348,7 @@ A condition picker (Good, Fair, Damaged, Lost) was added to the staff return for
 | **Title** | Member + Staff views don't catch database errors, so the app could crash. |
 | **Severity** | Medium	|
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `MemberView` (`BorrowButton_Click`, `ReserveButton_Click`, `Load*` methods) + `StaffView` (`IssueButton_Click`, `ReturnButton_Click`, `LoadOverdueItems`) |
 | **Related** | REQ-12 (Reliability) |
@@ -364,7 +364,7 @@ An error handle was not implemented at the time of the development.
 
 **Fix:**
 
-Every database call site in the Member view is now wrapped, and a failure shows UserMessage.DatabaseUnavailable rather than closing the application. The Login view already handled this and now uses the shared message. In the Staff view one guard around RefreshAllData() covers all seven loaders, with separate guards on the Issue, Return, Suspend, Reactivate and Fulfil actions.
+Every database call site in the Member view is now wrapped, and a failure shows UserMessage.DatabaseUnavailable rather than closing the application. The Login view already handled this and now uses the shared message. In the Staff view one guard around RefreshAllData() covers all seven loaders, with separate guards on the Issue, Return, Suspend and Fulfil actions.
 
 Defect is view-layer (WPF) and can't be unit tested.
 
@@ -377,7 +377,7 @@ Defect is view-layer (WPF) and can't be unit tested.
 | **Title** |  Validation messages don't say which field is wrong. |
 | **Severity** | Low |
 | **Priority** | P2 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `MemberActionsService.ReserveBook` (Member view Reserve form) + `StaffView.IssueButton_Click` (Staff Issue Loan form) |
 | **Related** | REQ-10 (Usability) |
@@ -408,7 +408,7 @@ Defect is view-layer (WPF) and can't be unit tested.
 | **Title** | A member can reserve a book they already have on loan. |
 | **Severity** | Low |
 | **Priority** | P2 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Daria |
 | **Found in** | `MemberActionsService.ReserveBook()` |
 | **Related** | REQ-2 (Borrow) + REQ-3 (Reservations), REQ-14 (Integrity) |
@@ -438,7 +438,7 @@ Covered by TC-15.
 | **Title** | Searching for "%" or "_" matches every book. |
 | **Severity** | Low |
 | **Priority** | P2 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `DatabaseHelper.SearchCatalogue()` |
 | **Related** | REQ-1 (Catalogue Management), REQ-9 (Input Validation) |
@@ -466,7 +466,7 @@ SearchCatalogue() now escapes backslash, % and _ before building the LIKE patter
 | **Title** | If sample data fails to load once, the app never retries – the catalogue stays empty. |
 | **Severity** | Low |
 | **Priority** | P2 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `App.xaml.cs` / `DatabaseInitializer.DatabaseExists()` |
 | **Related** | REQ-12 (Reliability), REQ-14 (Integrity) |
@@ -499,7 +499,7 @@ Covered by TC-36.
 | **Title** | TC-5 doesn't test the app (it would pass even if the app broke); TC-4's name is wrong. |
 | **Severity** | Medium |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `LibraryQA.Tests/StaffViewTests.cs` (TC-4, TC-5) |
 | **Related** | REQ-6 (Reservation count), REQ-9 (Guard clause) |
@@ -529,7 +529,7 @@ Verified by TC-5 itself, as the rewritten test now fails if CreateLoan's guard c
 | **Title** | TC-6 and TC-7 check less than the RTM says they do. |
 | **Severity** | Medium |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `LibraryQA.Tests/StaffViewTests.cs` (TC-6, TC-7) |
 | **Related** | REQ-2 (Return) + REQ-14 (Integrity), REQ-7 + REQ-11 (Access Control) |
@@ -558,7 +558,7 @@ TC-6 now asserts a hardcoded expected status from known seed data instead of rec
 | **Title** | Tests fail with a confusing error if the database can't be created (e.g. on CI).  |
 | **Severity** | Medium |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer |
 | **Found in** | `LibraryQA.Tests/StaffViewTests.cs`, `LoginViewTests.cs`, `MemberViewTests.cs` (`Setup()`) |
 | **Related** | REQ-12 (Reliability) |
@@ -576,7 +576,7 @@ Error handling was skipped for this case. There were no Setup methods that were 
 
 The Setup() method in every test class now asserts the return values of InitializeDatabase() and SeedSampleData(), with messages naming the SQL file that failed to copy. On a fresh machine such as a CI runner, a missing content file produces one clear failure instead of every test failing for an unrelated-looking reason.
 
-Verified by the Setup assertions in all three test classes.
+Verified by the Setup assertions in all 10 test classes.
 
 ---
 
@@ -587,9 +587,9 @@ Verified by the Setup assertions in all three test classes.
 | **Title** | Suspend and Reactivate report success even when the database update fails  |
 | **Severity** | Medium |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer (code review) |
-| **Found in** | `StaffView.SuspendButton_Click`, `StaffView.ReactivateButton_Click` |
+| **Found in** | `StaffView.SuspendButton_Click`, `StaffView.ReactivateButton_Click` (since merged into `ActivateButton_Click`) |
 | **Related** | REQ-12 (Reliability), REQ-19 (Member Suspension) |
 
 **Description:**
@@ -613,9 +613,9 @@ Both handlers now check the return value and show a failure message when no row 
 | **Title** | Login screen reveals that a suspended account exists before any password check  |
 | **Severity** | Medium |
 | **Priority** | P1 |
-| **Status** | Resolved |
+| **Status** | Closed |
 | **Found by** | Summer (code review) |
-| **Found in** | `LoginView.LoginButton_Click`, `AuthenticationService.IsAccountSuspended` |
+| **Found in** | `LoginView.LoginButton_Click`, `AuthenticationService.IsAccountSuspended` (since replaced by `GetStatusWithValidCredentials`) |
 | **Related** | REQ-11 (Security), REQ-19 (Member Suspension) |
 
 **Description:**
@@ -637,23 +637,23 @@ The suspension message is now shown only after the password is verified, via IsS
 
 | ID | Title | Severity | Priority | Status |
 |---|---|---|---|---|
-| DEF-01 | Database stored password hashes do not match the documented passwords | High | P1 | Resolved |
-| DEF-02 | Book status not restored when a loan is returned | High | P1 | Resolved |
-| DEF-03 | Reservation not marked fulfilled when the reserved item is returned | Critical | P1 | Resolved |
-| DEF-04 | Error presentation is inconsistent across the three interfaces | Low | P1 | Resolved |
-| DEF-05 | Partially entered sample data | Medium | P2 | Resolved |
-| DEF-06 | Reserving a book sets it to "Reserved" while still on loan | High | P1 | Resolved |
-| DEF-07 | Staff Issue Loan skips the 2-book limit and the member ID check | High | P1 | Resolved |
-| DEF-08 | Book status is updated twice on borrow and return | Low | P2 | Resolved |
-| DEF-09 | Overdue checks use UTC; day counts differ between views | High | P1 | Resolved |
-| DEF-10 | Return condition is never recorded | Medium | P2 | Resolved |
-| DEF-11 | Member and Staff views do not catch database errors | Medium | P1 | Resolved |
-| DEF-12 | Validation messages do not say which field is wrong | Low | P2 | Resolved |
-| DEF-13 | A member can reserve a book they already have on loan | Low | P2 | Resolved |
-| DEF-14 | Searching for "%" or "_" matches every book | Low | P2 | Resolved |
-| DEF-15 | Sample data never retries after a failed load | Low | P2 | Resolved |
-| DEF-16 | TC-5 does not test the app; TC-4's name is wrong | Medium | P1 | Resolved |
-| DEF-17 | TC-6 and TC-7 check less than the RTM says they do | Medium | P1 | Resolved |
-| DEF-18 | Tests fail with a confusing error if the database cannot be created | Medium | P1 | Resolved |
-| DEF-19 | Suspend and Reactivate report success even when the database update fails | Medium | P1 | Resolved |
-| DEF-20 | Login screen reveals that a suspended account exists before any password check | Medium | P1 | Resolved |
+| DEF-01 | Database stored password hashes do not match the documented passwords | High | P1 | Closed |
+| DEF-02 | Book status not restored when a loan is returned | High | P1 | Closed |
+| DEF-03 | Reservation not marked fulfilled when the reserved item is returned | Critical | P1 | Closed |
+| DEF-04 | Error presentation is inconsistent across the three interfaces | Low | P1 | Closed |
+| DEF-05 | Partially entered sample data | Medium | P2 | Closed |
+| DEF-06 | Reserving a book sets it to "Reserved" while still on loan | High | P1 | Closed |
+| DEF-07 | Staff Issue Loan skips the 2-book limit and the member ID check | High | P1 | Closed |
+| DEF-08 | Book status is updated twice on borrow and return | Low | P2 | Closed |
+| DEF-09 | Overdue checks use UTC; day counts differ between views | High | P1 | Closed |
+| DEF-10 | Return condition is never recorded | Medium | P2 | Closed |
+| DEF-11 | Member and Staff views do not catch database errors | Medium | P1 | Closed |
+| DEF-12 | Validation messages do not say which field is wrong | Low | P2 | Closed |
+| DEF-13 | A member can reserve a book they already have on loan | Low | P2 | Closed |
+| DEF-14 | Searching for "%" or "_" matches every book | Low | P2 | Closed |
+| DEF-15 | Sample data never retries after a failed load | Low | P2 | Closed |
+| DEF-16 | TC-5 does not test the app; TC-4's name is wrong | Medium | P1 | Closed |
+| DEF-17 | TC-6 and TC-7 check less than the RTM says they do | Medium | P1 | Closed |
+| DEF-18 | Tests fail with a confusing error if the database cannot be created | Medium | P1 | Closed |
+| DEF-19 | Suspend and Reactivate report success even when the database update fails | Medium | P1 | Closed |
+| DEF-20 | Login screen reveals that a suspended account exists before any password check | Medium | P1 | Closed |
