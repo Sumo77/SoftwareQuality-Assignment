@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
@@ -36,12 +37,26 @@ namespace LibraryQA.Views
                 Debug.WriteLine($"Could not expire reservations - database error: {ex.Message}");
             }
 
+            RefreshAllData();
+        }
+
+        // Reload every tab's data. Called on load and whenever the member switches tab, so a staff
+        // approval or return made elsewhere shows without logging out and back in
+        private void RefreshAllData()
+        {
             LoadCatalogue();
             LoadMyLoans();
             LoadMyReservations();
             LoadLoanHistory();
             ShowOverdueNotice();
             LoadRejectionNotices();
+        }
+
+        private void MemberTabs_SelectionChanged(object sender, SelectionChangedEventArgs e) // Refresh the member's data on tab change
+        {
+            if (!ReferenceEquals(e.OriginalSource, MemberTabs)) return; // ignore inner list selections
+
+            RefreshAllData();
         }
 
         // REQ-17: the member is told about overdue items as soon as they log in. The notice stops
@@ -148,7 +163,7 @@ namespace LibraryQA.Views
             LoadCatalogue(SearchBox.Text.Trim()); // Refresh catalogue so status updates
         }
 
-        private void LoadMyLoans() // Load the member's active and pending loans and display them in the list view
+        private void LoadMyLoans() // Load the member's current loans
         {
 
             try
@@ -192,7 +207,7 @@ namespace LibraryQA.Views
 
         }
 
-        private void LoadMyReservations() // Load the member's active reservations and display them in the list view
+        private void LoadMyReservations() // Load the member's reservations
         {
 
             try
@@ -207,7 +222,7 @@ namespace LibraryQA.Views
                         BookID = Convert.ToInt32(r["BookID"]),
                         Title = r["Title"]?.ToString() ?? "",
                         ReservedOn = r["ReservationDate"]?.ToString() ?? "",
-                        Status = r["Status"]?.ToString() ?? ""
+                        Status = ReservationStatusText(r)
                     }).ToList();
 
                     MyReservationsListView.ItemsSource = reservations;
@@ -221,7 +236,28 @@ namespace LibraryQA.Views
 
         }
 
-        private void LoadLoanHistory() // Load the member's loan history and display it in the list view
+        // DEF-24: a reservation's raw status does not say whether the item is waiting to be collected
+        private static string ReservationStatusText(Dictionary<string, object> reservation)
+        {
+            string status = reservation["Status"]?.ToString() ?? "";
+
+            if (IsNotified(reservation))
+            {
+                return "Ready to collect";
+            }
+
+            return status == "Pending" ? "Awaiting staff approval" : "Waiting - item still on loan";
+        }
+
+        // True once the item has become available and is being held for this member (REQ-20)
+        private static bool IsNotified(Dictionary<string, object> reservation)
+        {
+            return reservation.TryGetValue("NotifiedDate", out object? notified)
+                && notified != null && notified != DBNull.Value
+                && !string.IsNullOrWhiteSpace(notified.ToString());
+        }
+
+        private void LoadLoanHistory() // Load the member's returned loans
         {
             try
             {
@@ -250,7 +286,7 @@ namespace LibraryQA.Views
             }
         }
 
-        private void LoadRejectionNotices() // REQ-18: Informs the member when a loan or reservation request of theirs has been rejected
+        private void LoadRejectionNotices() // REQ-18: tells the member when a request of theirs was rejected
         {
             try
             {
@@ -274,7 +310,7 @@ namespace LibraryQA.Views
             }
         }
 
-        private void LoadCatalogue(string query = "") // Load the catalogue based on the search query and display it in the list view
+        private void LoadCatalogue(string query = "") // Load catalogue results for the search box
         {
 
             try

@@ -15,7 +15,7 @@ namespace LibraryQA.Tests
         private string _connectionString = string.Empty;
 
         [TestInitialize]
-        public void Setup() // Setup the tests
+        public void Setup() // Build a fresh database for this test
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"noticetest_{Guid.NewGuid()}.db");
@@ -29,7 +29,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup() // Cleans/Deletes the tests
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);

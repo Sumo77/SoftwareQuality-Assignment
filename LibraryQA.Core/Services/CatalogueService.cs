@@ -1,4 +1,4 @@
-﻿using LibraryQA.Core.Database;
+using LibraryQA.Core.Database;
 using System;
 using System.Globalization;
 using System.Text.RegularExpressions;
@@ -47,7 +47,7 @@ namespace LibraryQA.Core.Services
 
         private readonly string _connectionString;
 
-        public CatalogueService(string connectionString) // Initialise Database Access Connection
+        public CatalogueService(string connectionString) // Initialise database access
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
@@ -82,7 +82,7 @@ namespace LibraryQA.Core.Services
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
-                if (db.GetBookById(bookId) == null) // Check if book exists
+                if (db.GetBookById(bookId) == null)
                 {
                     return Fail(null, "Book not found. It may have been removed.");
                 }
@@ -228,13 +228,13 @@ namespace LibraryQA.Core.Services
             return null;
         }
 
-        private static string? BlankToNull(string? value)
+        private static string? BlankToNull(string? value) // Optional fields are stored as NULL, not empty text
         {
             string trimmed = (value ?? "").Trim();
             return trimmed.Length == 0 ? null : trimmed;
         }
 
-        private static string NormaliseIsbn(string isbn)
+        private static string NormaliseIsbn(string isbn) // Strip hyphens and spaces for comparison
         {
             return Regex.Replace(isbn, @"[\s-]", "").ToUpperInvariant();
         }
@@ -246,11 +246,11 @@ namespace LibraryQA.Core.Services
             return Regex.IsMatch(normalisedIsbn, "^[0-9]{13}$") || Regex.IsMatch(normalisedIsbn, "^[0-9]{9}[0-9X]$");
         }
 
-        private static CatalogueResult Fail(string? field, string message)
+        private static CatalogueResult Fail(string? field, string message) // A refusal naming the field at fault (REQ-9)
         {
             return new CatalogueResult { Success = false, Message = message, Field = field };
         }
 
-        private sealed record CleanBook(string Title, string Author, string? Isbn, string? Publisher, int? Year, string? Genre, string? Description);
+        private sealed record CleanBook(string Title, string Author, string? Isbn, string? Publisher, int? Year, string? Genre, string? Description); // Validated, trimmed values ready to save
     }
 }

@@ -67,9 +67,49 @@ The requirements themselves are defined in `Requirements.md`.
 | TC-63 | An uncollected reservation expires after 5 days and the book returns to Available | Integration | John | Pass |
 | TC-64 | A reservation collected within the 5-day window is fulfilled and does not expire | Integration | John | Pass |
 | TC-65 | An expired reservation no longer appears in the member's active reservations | Integration | John | Pass |
+| TC-8b | Once staff approve a pending loan request, the book's status updates to On Loan | Integration | Daria | Pass |
+| TC-66 | Adding a book with valid details saves it as Available, with the details trimmed | Unit | John | Pass |
+| TC-67 | A blank title is rejected with a message naming the Title field, and nothing is added | Unit | John | Pass |
+| TC-68 | A blank author is rejected with a message naming the Author field | Unit | John | Pass |
+| TC-69 | A title over the length limit is rejected, one exactly at the limit is accepted (boundary) | Unit | John | Pass |
+| TC-70 | A non-numeric publication year is rejected with a message naming that field | Unit | John | Pass |
+| TC-71 | A negative year is accepted, because the catalogue already holds a book dated -800 | Unit | John | Pass |
+| TC-72 | A year beyond next year is rejected | Unit | John | Pass |
+| TC-73 | ISBNs of the wrong length or containing letters are rejected; a 10-digit ISBN ending in X is accepted | Unit | John | Pass |
+| TC-74 | An ISBN already in use is rejected, even if typed with different hyphens | Unit | John | Pass |
+| TC-75 | Several books may have no ISBN - blank is stored as NULL, not a repeated empty string | Unit | John | Pass |
+| TC-76 | Editing a book changes its details and keeps its status unchanged, even while on loan | Integration | John | Pass |
+| TC-77 | A book may keep its own ISBN when edited, but cannot take another book's ISBN | Unit | John | Pass |
+| TC-78 | Editing a book that does not exist fails with a clear message instead of an error | Unit | John | Pass |
+| TC-79 | A book that has never been loaned or reserved can be removed | Integration | John | Pass |
+| TC-80 | A book that is on loan cannot be removed, and its status is untouched | Integration | John | Pass |
+| TC-81 | A book returned long ago still has loan history, so it cannot be removed | Integration | John | Pass |
+| TC-82 | Removing a book that does not exist fails with a clear message instead of an error | Unit | John | Pass |
+| TC-83 | Looking up a member ID that does not exist fails with a clear message | Unit | Daria | Pass |
+| TC-84 | A staff account cannot be looked up - the lookup covers members only | Unit | Daria | Pass |
+| TC-85 | A member's loan list holds only that member's loans, never another member's | Unit | Daria | Pass |
+| TC-86 | Overdue items are split from current loans, with the day count from the shared overdue rule | Integration | Daria | Pass |
+| TC-87 | A loan due today is not overdue (boundary) | Unit | Daria | Pass |
+| TC-88 | Contact details are returned only while the member has overdue items | Unit | Daria | Pass |
+| TC-89 | A member's active reservations appear in the lookup | Integration | Daria | Pass |
+| TC-90 | The data staff can read about a member holds no password hash or login data | Unit | Daria | Pass |
+| TC-91 | A second loan request is refused while the book already has a pending request | Integration | Summer | Pass |
+| TC-92 | Two pending requests for one book cannot both be approved | Integration | Summer | Pass |
+| TC-93 | A returned book can be borrowed again, and the closed loan is kept as history | Integration | Summer | Pass |
+| TC-94 | The staff dashboard figures count only live loans and follow the supplied local date | Integration | Summer | Pass |
+| TC-95 | The most-borrowed report ranks by borrow count and omits titles never borrowed | Integration | Summer | Pass |
+| TC-96 | An account that is not Active can neither borrow nor reserve | Integration | Summer | Pass |
+| TC-97 | The 2-item limit permits exactly two and releases the allowance on return | Integration | Summer | Pass |
+| TC-98 | The staff dashboard stays responsive on a 5,000-book catalogue | Performance | Summer | Pass |
+| TC-99 | Staff catalogue management stays responsive on a 5,000-book catalogue | Performance | Summer | Pass |
 
 Test numbers are allocated in blocks to avoid collisions during parallel development:
-John TC-12 to TC-19, Daria TC-20 to TC-29, Summer TC-30 to TC-54, John (REQ-18/REQ-20) TC-55 to TC-65.
+John TC-12 to TC-19, Daria TC-20 to TC-29, Summer TC-30 to TC-54, John (REQ-18/REQ-20) TC-55 to TC-65,
+John (REQ-1 catalogue) TC-66 to TC-82, Daria (member lookup) TC-83 to TC-90,
+Summer (DEF-21/DEF-22 and the REQ-6/REQ-8/REQ-15 gaps) TC-91 to TC-99.
+
+Numbers reserved in a block but not needed are left unused, so 90 test cases run with IDs
+reaching TC-99. TC-17 to TC-19 and TC-21 to TC-29 were never required.
 
 ---
 
@@ -77,27 +117,27 @@ John TC-12 to TC-19, Daria TC-20 to TC-29, Summer TC-30 to TC-54, John (REQ-18/R
 
 | Req ID | Requirement | Type | Implemented feature | Test Case(s) | Result | Defects raised | Implementation | Tested |
 |---|---|---|---|---|---|---|---|---|
-| REQ-1 | Catalogue Management | Functional | Catalogue search by title, author or ISBN with status; staff add, edit and remove records | TC-12 | Pass | DEF-14 | Partial | Partial |
-| REQ-2a | Borrow | Functional | Staff issue loan: 14-day due date, status set to On Loan | TC-8 | Pass | DEF-06, DEF-07, DEF-08, DEF-13 | Implemented | Yes |
-| REQ-2b | Return | Functional | Process return: closes the loan, records condition, resets status | TC-6, TC-16 | Pass | DEF-02, DEF-08, DEF-09, DEF-10, DEF-17 | Implemented | Yes |
-| REQ-3 | Reservations | Functional | Reserve an on-loan book; one reservation per book; fulfilled on return | TC-9, TC-13, TC-14, TC-15 | Pass | DEF-03, DEF-06, DEF-13 | Implemented | Yes |
-| REQ-4 | Overdue | Functional | Overdue flag and days overdue, calculated in OverdueRules from the local date | TC-30, TC-31, TC-32, TC-33, TC-34 | Pass | DEF-09 | Implemented | Yes |
-| REQ-5 | Member Portal | Functional | Member view: own current loans, loan history and reservations | TC-1, TC-11 | Pass | DEF-01 | Implemented | Yes |
-| REQ-6 | Staff Portal | Functional | Staff view: report summary, overdue list, member and account lists | TC-2, TC-4, TC-7c, TC-42, TC-49 | Pass | DEF-01, DEF-03, DEF-16 | Implemented | Partial |
-| REQ-7 | Access Control | Functional | Role-based routing to the Member or Staff view | TC-1, TC-2, TC-7, TC-7b, TC-7c | Pass | DEF-01, DEF-17 | Implemented | Yes |
-| REQ-8 | Loan Limits | Functional | 2-item loan limit, including pending requests | TC-10 | Pass | DEF-07 | Implemented | Partial |
-| REQ-9 | Input Validation | Functional | Field-level validation messages; search wildcards escaped | TC-5, TC-12, TC-41, TC-50 | Pass | DEF-07, DEF-12, DEF-14, DEF-16 | Implemented | Partial |
-| REQ-10 | Usability | Non-Functional | Shared message style (UserMessage); members, books and loans picked from lists | Usability walkthrough (Week 11) | Pending | DEF-01, DEF-04, DEF-12 | Partial | Planned |
-| REQ-11 | Security | Non-Functional | SHA-256 password hashes; identical rejection for a wrong password or unknown username | TC-2, TC-3, TC-7, TC-39, TC-40, TC-52 | Pass | DEF-01, DEF-17, DEF-20 | Implemented | Yes |
-| REQ-12 | Reliability | Non-Functional | Database errors caught in every view; failed seeding retried | TC-3, TC-36 | Pass | DEF-04, DEF-09, DEF-11, DEF-15, DEF-18, DEF-19 | Implemented | Partial |
-| REQ-13 | Maintainability | Non-Functional | Business rules held in Core services; shared UserMessage class | Code review at merge, CI quality gates | Reviewed | DEF-08 | Implemented | Informal |
-| REQ-14 | Integrity | Non-Functional | Book status kept in step with loan and reservation records | TC-8, TC-9, TC-35 | Pass | DEF-02, DEF-03, DEF-05, DEF-06, DEF-08, DEF-10, DEF-13, DEF-15, DEF-17 | Implemented | Partial |
-| REQ-15 | Performance | Non-Functional | Catalogue search on a 5,000-book catalogue | TC-37 | Pass | — | Partial | Partial |
+| REQ-1 | Catalogue Management | Functional | Catalogue search by title, author or ISBN with status; staff add, edit and remove records (CatalogueService) | TC-12, TC-66 to TC-82, TC-99 | Pass | DEF-14 | Implemented | Yes |
+| REQ-2a | Borrow | Functional | Staff issue loan: 14-day due date, status set to On Loan | TC-8, TC-91, TC-92, TC-93 | Pass | DEF-06, DEF-07, DEF-08, DEF-13, DEF-21 | Implemented | Yes |
+| REQ-2b | Return | Functional | Process return: closes the loan, records condition, resets status | TC-6, TC-16, TC-93 | Pass | DEF-02, DEF-08, DEF-09, DEF-10, DEF-17 | Implemented | Yes |
+| REQ-3 | Reservations | Functional | Reserve an on-loan book; one reservation per book; fulfilled on return | TC-9, TC-13, TC-14, TC-15, TC-89 | Pass | DEF-03, DEF-06, DEF-13, DEF-24 | Implemented | Yes |
+| REQ-4 | Overdue | Functional | Overdue flag and days overdue, calculated in OverdueRules from the local date | TC-30, TC-31, TC-32, TC-33, TC-34, TC-86, TC-87, TC-94 | Pass | DEF-09 | Implemented | Yes |
+| REQ-5 | Member Portal | Functional | Member view: own current loans, loan history and reservations | TC-1, TC-11, TC-85 | Pass | DEF-01 | Implemented | Yes |
+| REQ-6 | Staff Portal | Functional | Staff view: report summary, overdue list, member and account lists, member lookup (MemberLookupService) | TC-2, TC-4, TC-7c, TC-42, TC-49, TC-84, TC-85, TC-86, TC-88, TC-89, TC-90, TC-94, TC-95, TC-98 | Pass | DEF-01, DEF-03, DEF-16 | Implemented | Yes |
+| REQ-7 | Access Control | Functional | Role-based routing to the Member or Staff view | TC-1, TC-2, TC-7, TC-7b, TC-7c, TC-96 | Pass | DEF-01, DEF-17, DEF-22 | Implemented | Yes |
+| REQ-8 | Loan Limits | Functional | 2-item loan limit, including pending requests | TC-10, TC-61, TC-62, TC-97 | Pass | DEF-07 | Implemented | Yes |
+| REQ-9 | Input Validation | Functional | Field-level validation messages; search wildcards escaped; catalogue field validation | TC-5, TC-12, TC-41, TC-50, TC-67, TC-68, TC-69, TC-70, TC-72, TC-73, plus the selection guards verified manually | Pass | DEF-07, DEF-12, DEF-14, DEF-16 | Implemented | Yes |
+| REQ-10 | Usability | Non-Functional | Shared message style (UserMessage); members, books and loans picked from lists | Usability walkthrough, 3 participants (see Task 7) | Pass | DEF-01, DEF-04, DEF-12, DEF-24, DEF-25, DEF-26 | Implemented | Indicative |
+| REQ-11 | Security | Non-Functional | SHA-256 password hashes; identical rejection for a wrong password or unknown username; member lookup exposes no credentials | TC-2, TC-3, TC-7, TC-39, TC-40, TC-52, TC-84, TC-88, TC-90 | Pass | DEF-01, DEF-17, DEF-20, DEF-25 | Implemented | Yes |
+| REQ-12 | Reliability | Non-Functional | Database errors caught in every view; failed seeding retried; unknown records fail with a clear message | TC-3, TC-36, TC-78, TC-82, TC-83, plus the database-error handling verified manually | Pass | DEF-04, DEF-09, DEF-11, DEF-15, DEF-18, DEF-19, DEF-25 | Implemented | Yes |
+| REQ-13 | Maintainability | Non-Functional | Business rules held in Core services; shared UserMessage class | Code review at merge, CI quality gates | Reviewed | DEF-08, DEF-23 | Implemented | Informal |
+| REQ-14 | Integrity | Non-Functional | Book status kept in step with loan and reservation records; ISBN uniqueness; removal blocked while loaned or with history | TC-8, TC-9, TC-35, TC-74, TC-76, TC-77, TC-80, TC-81, TC-91, TC-92, TC-93 | Pass | DEF-02, DEF-03, DEF-05, DEF-06, DEF-08, DEF-10, DEF-13, DEF-15, DEF-17, DEF-21 | Implemented | Yes |
+| REQ-15 | Performance | Non-Functional | Catalogue search, staff dashboard refresh and catalogue management, each on a 5,000-book catalogue | TC-37, TC-98, TC-99 | Pass | — | Implemented | Yes |
 | REQ-16 | Account Creation | Functional | Registration screen; account stays Pending until staff activate it (RegistrationService) | TC-40, TC-41, TC-42, TC-50, TC-51 | Pass | — | Implemented | Yes |
 | REQ-17 | Overdue Notices | Functional | Overdue notice at member login and on the staff dashboard (OverdueNotice) | TC-46, TC-47, TC-48, TC-54 | Pass | — | Implemented | Yes |
-| Loan and reservation requests held Pending until staff approve or reject | TC-55, TC-56, TC-57, TC-58, TC-59, TC-60, TC-61, TC-62 | Pass | — | Implemented | Yes |
-| REQ-19 | Member Suspension | Functional | Staff suspend and reactivate accounts; suspended message at login | TC-20, TC-53 | Pass | DEF-19, DEF-20 | Implemented | Yes |
-| Uncollected reservation cancelled after 5 days; book returns to Available | TC-63, TC-64, TC-65 | Pass | — | Implemented | Yes |
+| REQ-18 | Loan and Reservation Approval | Functional | Loan and reservation requests held Pending until staff approve or reject | TC-8b, TC-55, TC-56, TC-57, TC-58, TC-59, TC-60, TC-61, TC-62, TC-92 | Pass | DEF-21 | Implemented | Yes |
+| REQ-19 | Member Suspension | Functional | Staff suspend and reactivate accounts; suspended message at login | TC-20, TC-53, TC-96 | Pass | DEF-19, DEF-20, DEF-22 | Implemented | Yes |
+| REQ-20 | Reservation Expiry | Functional | Uncollected reservation cancelled after 5 days; book returns to Available | TC-63, TC-64, TC-65 | Pass | DEF-24 | Implemented | Yes |
 | REQ-21 | Login Lockout | Functional | Account locked after 5 failed attempts; staff unlock | TC-43, TC-44, TC-45, TC-49, TC-52, TC-53 | Pass | — | Implemented | Yes |
 
 **Column meanings**
@@ -133,13 +173,18 @@ held as evidence.
 | The Days Overdue column and the overdue notice appearing on the member screen | REQ-17 |
 | The overdue notice on the staff dashboard clearing after a return | REQ-17 |
 | The Pending, Suspended and Locked messages shown on the login screen | REQ-16, REQ-19, REQ-21 |
+| The "please select a member / book / loan" guards on the staff forms | REQ-9 |
+| A database failure showing a message instead of closing the application | REQ-12 |
+| A reservation reading "Ready to collect" once the item is held, and the staff Collection column | REQ-3, REQ-20 |
+| Both views reloading on a tab change, so another session's changes appear | REQ-10 |
 
 ---
 
 ## Known Limitations (For Future Iterations)
 
-- **REQ-15** — Performance is measured for catalogue search only, not for every feature as the
-  requirement is worded.
+- **REQ-15** — Performance is measured for the three heaviest paths: catalogue search, the staff
+  dashboard refresh and catalogue management (TC-37, TC-98, TC-99). The member screens were not
+  timed separately because they read a handful of rows per member.
 - **REQ-17** — The overdue notice is shown at login and on refresh, not at the moment a loan tips
   overdue during an open session. This matches the requirement as written.
 - **REQ-21** — If every staff account is locked at the same time, there is no in-application

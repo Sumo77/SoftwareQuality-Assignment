@@ -13,7 +13,11 @@ namespace LibraryQA.Core.Services
 
         private const int LoanPeriodDays = 14;
 
-        public MemberActionsService(string connectionString) // Initialise Database Access Connection
+        private const string MemberRole = "Member";
+        private const string ActiveStatus = "Active";
+        private const string SuspendedStatus = "Suspended";
+
+        public MemberActionsService(string connectionString) // Initialise database access
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
@@ -22,25 +26,16 @@ namespace LibraryQA.Core.Services
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
-                var account = db.GetAccountInfo(memberId);
+                string? refusal = RefusalReason(db, memberId, "borrow items");
 
-                if (account == null)
+                if (refusal != null)
                 {
-                    return new BorrowResult { Success = false, Message = $"No member found with ID {memberId}." };
-                }
-
-                if (!string.Equals(account["Role"]?.ToString(), "Member", StringComparison.OrdinalIgnoreCase))
-                {
-                    return new BorrowResult { Success = false, Message = $"Account {memberId} is not a Member account and cannot borrow items." };
-                }
-                if (string.Equals(account["AccountStatus"]?.ToString(), "Suspended", StringComparison.OrdinalIgnoreCase))
-                {
-                    return new BorrowResult { Success = false, Message = $"Account {memberId} is suspended and cannot borrow items." };
+                    return new BorrowResult { Success = false, Message = refusal };
                 }
 
                 var book = db.GetBookById(bookId);
 
-                if (book == null) // Check if book exists
+                if (book == null)
                 {
                     return new BorrowResult { Success = false, Message = "Book not found." };
                 }
@@ -64,7 +59,7 @@ namespace LibraryQA.Core.Services
 
                 if (loanId == null) // Check book loan request was successful
                 {
-                    return new BorrowResult { Success = false, Message = "Unable to complete the loan request. Please try again." };
+                    return new BorrowResult { Success = false, Message = "Someone else has already requested this book and is waiting for staff approval - please check back soon, or reserve it once it is on loan." };
                 }
 
                 return new BorrowResult
@@ -82,6 +77,14 @@ namespace LibraryQA.Core.Services
         {
             using (var db = new DatabaseHelper(_connectionString))
             {
+                // DEF-22: reserving had no account check, so a suspended member could still hold
+                string? refusal = RefusalReason(db, memberId, "reserve items");
+
+                if (refusal != null)
+                {
+                    return new ReserveResult { Success = false, Message = refusal };
+                }
+
                 var book = db.GetBookById(bookId);
 
                 if (book == null) // Check if book exists
@@ -117,9 +120,8 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult { Success = false, Message = "The borrowing limit has been reached - Maximum " + MaxActiveLoans + " books can be borrowed or reserved at a time." };
                 }
 
-                // REQ-18: the reservation request is held as "Pending" until a staff member approves or rejects it.
-                // The book's status is not changed until approval - ApproveReservation and ProcessReturn
-                // are responsible for promoting the catalogue status once the request is active.
+                // REQ-18: held "Pending" until staff act. The status is not changed here -
+                // ApproveReservation and ProcessReturn promote it once the request is active.
                 int? reservationId = db.CreateReservationRequest(bookId, memberId, DateTime.Today);
 
                 if (reservationId == null) // Check if reservation request was successful
@@ -127,12 +129,43 @@ namespace LibraryQA.Core.Services
                     return new ReserveResult
                     {
                         Success = false,
-                        Message = "Unable to reserve the book - It may have been reserved by someone else, so please check back and try again at a later date."
+                        Message = "Someone else reserved this book first - please check back once their hold has been collected or has expired."
                     };
                 }
 
                 return new ReserveResult { Success = true, Message = "Your request to reserve the book has been submitted and is pending staff approval." };
             }
+        }
+
+        // DEF-22: the one account check for borrowing and reserving; requires Active rather than
+        // listing the states that are not. Null means the member may act (REQ-7, REQ-19).
+        private static string? RefusalReason(DatabaseHelper db, int memberId, string action)
+        {
+            var account = db.GetAccountInfo(memberId);
+
+            if (account == null)
+            {
+                return $"No member found with ID {memberId}.";
+            }
+
+            if (!string.Equals(account["Role"]?.ToString(), MemberRole, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"This is not a Member account and cannot {action}.";
+            }
+
+            string status = account["AccountStatus"]?.ToString() ?? string.Empty;
+
+            if (string.Equals(status, SuspendedStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"This account is suspended and cannot {action}.";
+            }
+
+            if (!string.Equals(status, ActiveStatus, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"This account is not active and cannot {action}.";
+            }
+
+            return null;
         }
     }
 }

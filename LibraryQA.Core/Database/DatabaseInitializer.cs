@@ -4,15 +4,14 @@ using System.IO;
 
 namespace LibraryQA.Core.Database
 {
-    // Database initialiser, handles database initialization and schema creation for the Library Management System.
-    // This class reads and executes the DatabaseSchema.sql script to create all tables,
-    // indexes, and constraints in the SQLite database.
+    // Creates the database and its schema by executing DatabaseSchema.sql, which holds every
+    // table, index and constraint.
     public class DatabaseInitializer
     {
         private readonly string _connectionString;
         private readonly string _databasePath;
 
-        public DatabaseInitializer(string databasePath) // Initializes a new instance of DatabaseInitializer with the specified database path.
+        public DatabaseInitializer(string databasePath) // Store the path to the database file
         {
             _databasePath = databasePath ?? throw new ArgumentNullException(nameof(databasePath));
             _connectionString = $"Data Source={databasePath}";
@@ -108,7 +107,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public bool ResetDatabase() // Resets the database by deleting the existing database file and reinitializing it with a fresh schema
+        public bool ResetDatabase() // Deletes the database file and rebuilds it from the schema
         {
             try
             {

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using LibraryQA.Core.Database;
 using LibraryQA.Core.Services;
@@ -16,7 +16,7 @@ namespace LibraryQA.Tests
         private MemberActionsService _service = null!;
 
         [TestInitialize]
-        public void Setup() // Setup the tests
+        public void Setup() // Build a fresh database for this test
         {
             // Fresh database per test due to randomised run/completion order
             _dbPath = Path.Combine(Path.GetTempPath(), $"membertest_{Guid.NewGuid()}.db");
@@ -31,7 +31,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup() // Cleans/Deletes the tests
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);
@@ -175,5 +175,42 @@ namespace LibraryQA.Tests
                     "A rejected reservation must not be written to the database.");
             }
         }
+        // TC-97: The 2-item limit permits exactly two and refuses the third with a message naming the
+        // limit, and returning an item releases the allowance again (REQ-8)
+        [TestMethod]
+        public void BorrowBook_LimitPermitsExactlyTwoAndReleasesOnReturn()
+        {
+            using (var db = new DatabaseHelper(_connectionString))
+            {
+                // Alice (1) starts with one loan, LoanID 3 on BookID 7. TC-10 covers a member already at
+                // the limit; this covers the boundary - that the second item is permitted.
+                Assert.AreEqual(1, db.GetActiveOrPendingCount(1),
+                    "Precondition check: Alice should start with one item.");
+
+                var second = _service.BorrowBook(bookId: 2, memberId: 1);
+                Assert.IsTrue(second.Success,
+                    $"A member holding one item must be allowed a second. Refused with: {second.Message}");
+                Assert.AreEqual(2, db.GetActiveOrPendingCount(1));
+
+                var third = _service.BorrowBook(bookId: 3, memberId: 1);
+                Assert.IsFalse(third.Success, "A third item must be refused.");
+                StringAssert.Contains(third.Message, "limit has been reached",
+                    "REQ-8 asks for a message stating the limit has been reached.");
+                StringAssert.Contains(third.Message, "2",
+                    "The message should name the limit so the member knows what it is.");
+
+                Assert.AreEqual(2, db.GetActiveOrPendingCount(1),
+                    "A refused request must not be recorded against the member.");
+
+                // Returning the original loan must free the allowance, or a member could be locked
+                // out of borrowing permanently.
+                Assert.IsTrue(db.ProcessReturn(loanId: 3, DateTime.Today, "Good"));
+                Assert.AreEqual(1, db.GetActiveOrPendingCount(1));
+
+                Assert.IsTrue(_service.BorrowBook(bookId: 3, memberId: 1).Success,
+                    "Returning an item must release the allowance it was using.");
+            }
+        }
+
     }
 }

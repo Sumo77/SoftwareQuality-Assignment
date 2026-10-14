@@ -20,7 +20,7 @@ namespace LibraryQA.Tests
         private ReservationExpiryService _expiryService = null!;
 
         [TestInitialize]
-        public void Setup()
+        public void Setup() // Build a fresh database for this test
         {
             _dbPath = Path.Combine(Path.GetTempPath(), $"approvaltest_{Guid.NewGuid()}.db");
 
@@ -36,7 +36,7 @@ namespace LibraryQA.Tests
         }
 
         [TestCleanup]
-        public void Cleanup()
+        public void Cleanup() // Delete this test's database
         {
             SqliteConnection.ClearAllPools();
             if (File.Exists(_dbPath)) File.Delete(_dbPath);

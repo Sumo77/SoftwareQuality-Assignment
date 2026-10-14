@@ -7,9 +7,8 @@ using Microsoft.Data.Sqlite;
 
 namespace LibraryQA.Views
 {
-    // Registration Interface (REQ-16). A prospective member supplies their details, the account is
-    // created with the status Pending, and library staff activate it from the Members tab before
-    // it can be used to log in.
+    // Registration screen (REQ-16). The account is created Pending; staff activate it from the
+    // Account Management tab before it can be used to log in.
     public partial class RegisterView : UserControl
     {
         // MainWindow listens to this to return to the login screen.
@@ -17,19 +16,19 @@ namespace LibraryQA.Views
 
         private readonly RegistrationService _registrationService;
 
-        public RegisterView()
+        public RegisterView() // Build the registration screen
         {
             InitializeComponent();
             _registrationService = new RegistrationService(App.ConnectionString);
             Loaded += (_, _) => FirstNameBox.Focus();
         }
 
-        private void BackButton_Click(object sender, RoutedEventArgs e)
+        private void BackButton_Click(object sender, RoutedEventArgs e) // Return to the login screen
         {
             BackToLoginRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        private void CreateAccountButton_Click(object sender, RoutedEventArgs e)
+        private void CreateAccountButton_Click(object sender, RoutedEventArgs e) // Submit the registration (REQ-16)
         {
             UserMessage.Clear(StatusText); // Prevents a stale message from a previous attempt
 

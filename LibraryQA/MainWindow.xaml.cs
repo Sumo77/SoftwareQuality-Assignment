@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using LibraryQA.Core.Models;
 using LibraryQA.Core.Services;
@@ -6,20 +6,20 @@ using LibraryQA.Views;
 
 namespace LibraryQA
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow : Window // Hosts the four views and routes between them
     {
         // Extracted so the role->view routing decision can be verified in isolation (REQ-7, REQ-11).
         public static Type ResolveViewType(UserRole role)
         {
             return role == UserRole.Staff ? typeof(StaffView) : typeof(MemberView);
         }
-        public MainWindow()
+        public MainWindow() // Start on the login screen
         {
             InitializeComponent();
             ShowLogin();
         }
 
-        private void ShowLogin()
+        private void ShowLogin() // Show the login view and wire up its events
         {
             var loginView = new LoginView();
             loginView.LoginSucceeded += LoginView_LoginSucceeded;
@@ -38,7 +38,7 @@ namespace LibraryQA
             RootGrid.Children.Add(registerView);
         }
 
-        private void LoginView_LoginSucceeded(object? sender, UserRole role)
+        private void LoginView_LoginSucceeded(object? sender, UserRole role) // Route the signed-in user to their role's view (REQ-7)
         {
             var loginView = sender as LoginView;
             string username = loginView?.UsernameBox.Text.Trim() ?? "";

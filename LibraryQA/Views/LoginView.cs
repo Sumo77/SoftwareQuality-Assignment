@@ -1,4 +1,4 @@
-﻿using LibraryQA.Core.Models;
+using LibraryQA.Core.Models;
 using LibraryQA.Core.Services;
 using Microsoft.Data.Sqlite;
 using System;
@@ -21,14 +21,14 @@ namespace LibraryQA.Views
 
         private readonly AuthenticationService _authService;
 
-        public LoginView()
+        public LoginView() // Build the login screen
         {
             InitializeComponent();
             _authService = new AuthenticationService(App.ConnectionString);
             Loaded += (_, _) => UsernameBox.Focus(); // Cosmetic - puts the cursor in the username box when the view loads
         }
 
-        private void LoginButton_Click(object sender, RoutedEventArgs e)
+        private void LoginButton_Click(object sender, RoutedEventArgs e) // Sign the user in, or explain the refusal
         {
             UserMessage.Clear(ErrorText); // Prevents stale errors from previous attempts
 
@@ -77,9 +77,8 @@ namespace LibraryQA.Views
             RegisterRequested?.Invoke(this, EventArgs.Empty);
         }
 
-        // Explains a refused login, but only once the password has been verified, so the screen
-        // cannot be used to discover which usernames exist (REQ-11, DEF-20). A wrong password and
-        // an unknown username both fall through to the same generic message.
+        // Explains a refusal only once the password is verified, so the screen cannot reveal which
+        // usernames exist (REQ-11, DEF-20). A wrong password and an unknown username read the same.
         private string RefusalMessage(string username, string password)
         {
             return _authService.GetStatusWithValidCredentials(username, password) switch

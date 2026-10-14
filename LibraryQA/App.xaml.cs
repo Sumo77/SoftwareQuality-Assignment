@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -19,7 +19,7 @@ namespace LibraryQA
         /// Pass this to DatabaseHelper wherever data access is needed.
         public static string ConnectionString => $"Data Source={DatabasePath}";
 
-        protected override void OnStartup(StartupEventArgs e)
+        protected override void OnStartup(StartupEventArgs e) // Create and seed the database before the window opens
         {
             // Create and seed the database before the main window opens.
             var initializer = new DatabaseInitializer(DatabasePath);
@@ -36,11 +36,8 @@ namespace LibraryQA
                 }
             }
 
-            // DEF-15: seeding is checked separately from schema creation.
-            // Previously, if the schema was created but seeding failed, the database file existed
-            // on the next launch, DatabaseExists() returned true, and the app never tried to seed
-            // again - leaving an empty catalogue permanently. Now the seed runs whenever the
-            // database holds no accounts, so a failed seed is retried on the next launch.
+            // DEF-15: seeding is checked separately from schema creation, so a seed that failed
+            // part-way leaves no accounts and is retried on the next launch.
             var seeder = new DatabaseSeeder(DatabasePath);
 
             if (!seeder.HasSampleData() && !seeder.SeedSampleData())

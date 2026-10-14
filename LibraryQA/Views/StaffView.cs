@@ -1,4 +1,4 @@
-﻿using LibraryQA.Core.Database;
+using LibraryQA.Core.Database;
 using LibraryQA.Core.Services;
 using System;
 using System.Linq;
@@ -23,6 +23,22 @@ namespace LibraryQA.Views
         private void StaffView_Loaded(object sender, RoutedEventArgs e) // Load all staff related data when the interface is loaded
         {
             RefreshAllData();
+        }
+
+        // Refresh when the staff switches tab, so changes made in another session appear
+        // without having to log out and back in
+        private void StaffTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!ReferenceEquals(e.OriginalSource, StaffTabs)) return; // ignore inner list selections
+
+            try
+            {
+                RefreshAllData();
+            }
+            catch (SqliteException ex) // DEF-11
+            {
+                Debug.WriteLine($"Tab refresh failed - database error: {ex.Message}");
+            }
         }
 
         private void RefreshAllData() // Refresh all data displayed in the staff interface
@@ -317,7 +333,7 @@ namespace LibraryQA.Views
             LoanComboBox.ItemsSource = loans;
         }
 
-        private void LoadAccountsList() // Populates the Accounts tab with every account, any role or status, for suspend / activate / unlock management
+        private void LoadAccountsList() // Every account, any role or status, for the Account Management tab
         {
             using var db = new DatabaseHelper(App.ConnectionString);
 
@@ -384,14 +400,20 @@ namespace LibraryQA.Views
                     BookId = Convert.ToInt32(row["BookID"]),
                     MemberName = row["MemberName"]?.ToString() ?? "",
                     MemberId = Convert.ToInt32(row["MemberID"]),
-                    ReservedOn = row["ReservationDate"]?.ToString() ?? ""
+                    ReservedOn = row["ReservationDate"]?.ToString() ?? "",
+                    // DEF-24: NotifiedDate is stamped when the item is held, so staff can see what is collectable
+                    Collection = row.TryGetValue("NotifiedDate", out object? notified)
+                        && notified != null && notified != DBNull.Value
+                        && !string.IsNullOrWhiteSpace(notified.ToString())
+                            ? $"Ready since {notified}"
+                            : "Item still on loan"
                 })
                 .ToList();
 
             ReservationsListView.ItemsSource = reservations;
         }
 
-        private void FulfilButton_Click(object sender, RoutedEventArgs e) // Marks a held reservation as collected: closes the reservation and issues the loan for the collecting member
+        private void FulfilButton_Click(object sender, RoutedEventArgs e) // Collects a held book: closes the hold and issues the loan
         {
             UserMessage.Clear(ReservationStatusText);
 
@@ -516,7 +538,7 @@ namespace LibraryQA.Views
                 : System.Windows.Media.Brushes.Green;
         }
 
-        private void LoadReporting() // Load reporting statistics and the most borrowed books, then display them in the interface
+        private void LoadReporting() // Reporting statistics and the most-borrowed list (REQ-6)
         {
             using var db = new DatabaseHelper(App.ConnectionString);
 
@@ -554,9 +576,8 @@ namespace LibraryQA.Views
             UserMessage.Show(ReservationStatusText, isError ? MessageKind.Warning : MessageKind.Success, message);
         }
 
-        // Generic display item for the Member/Book/Loan pickers - WPF's ComboBox
-        // shows ToString() by default when no DisplayMemberPath is set, so this
-        // keeps the XAML simple while still carrying the real ID for lookups.
+        // Display item for the Member/Book/Loan pickers. A ComboBox shows ToString() by default,
+        // which keeps the XAML simple while this still carries the real ID.
         private class PickerItem
         {
             public int Id { get; set; }
@@ -576,7 +597,7 @@ namespace LibraryQA.Views
             public int FailedAttempts { get; set; } // REQ-21: how close the account is to locking
         }
 
-        private class OverdueItem // Represents an overdue loan item with relevant details for display in the staff interface
+        private class OverdueItem // An overdue loan shown in the staff list
         {
             public int LoanId { get; set; }
             public int BookId { get; set; }
@@ -587,7 +608,7 @@ namespace LibraryQA.Views
             public int DaysOverdue { get; set; }
         }
 
-        private class ReservationItem // Represents an active reservation item with relevant details for display in the staff interface
+        private class ReservationItem // An active reservation shown in the staff list
         {
             public int ReservationId { get; set; }
             public string Title { get; set; } = "";
@@ -595,9 +616,10 @@ namespace LibraryQA.Views
             public string MemberName { get; set; } = "";
             public int MemberId { get; set; }
             public string ReservedOn { get; set; } = "";
+            public string Collection { get; set; } = "";
         }
 
-        private class MostBorrowedItem // Represents a book that has been borrowed the most times, with relevant details for display in the staff interface
+        private class MostBorrowedItem // A most-borrowed entry for the reporting list
         {
             public string Title { get; set; } = "";
             public int TimesBorrowed { get; set; }

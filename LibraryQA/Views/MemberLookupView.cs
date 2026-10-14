@@ -1,4 +1,4 @@
-﻿using LibraryQA.Core.Database;
+using LibraryQA.Core.Database;
 using LibraryQA.Core.Services;
 using Microsoft.Data.Sqlite;
 using System;
@@ -24,7 +24,7 @@ namespace LibraryQA.Views
             }
         }
 
-        private void LoadMembers() // Populates the picker with every member, including suspended ones, keeping the current selection
+        private void LoadMembers() // Every member, suspended included, keeping the current selection
         {
             try
             {
@@ -135,14 +135,14 @@ namespace LibraryQA.Views
             ResultPanel.Visibility = Visibility.Visible;
         }
 
-        private class PickerItem // Represents a member choice in the picker - ComboBox shows ToString() by default
+        private class PickerItem // A member choice in the picker; a ComboBox shows ToString() by default
         {
             public int Id { get; set; }
             public string Display { get; set; } = "";
             public override string ToString() => Display;
         }
 
-        private class LoanRow // Represents one of the member's active loans for display in the staff interface
+        private class LoanRow // One of the member's current loans
         {
             public int LoanId { get; set; }
             public string Title { get; set; } = "";
@@ -151,7 +151,7 @@ namespace LibraryQA.Views
             public string Status { get; set; } = "";
         }
 
-        private class OverdueRow // Represents one of the member's overdue items for display in the staff interface
+        private class OverdueRow // One of the member's overdue items
         {
             public int LoanId { get; set; }
             public string Title { get; set; } = "";
@@ -159,7 +159,7 @@ namespace LibraryQA.Views
             public int DaysOverdue { get; set; }
         }
 
-        private class ReservationRow // Represents one of the member's active reservations for display in the staff interface
+        private class ReservationRow // One of the member's active reservations
         {
             public int ReservationId { get; set; }
             public string Title { get; set; } = "";

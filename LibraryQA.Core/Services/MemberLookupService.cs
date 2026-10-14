@@ -1,4 +1,4 @@
-﻿using LibraryQA.Core.Database;
+using LibraryQA.Core.Database;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,14 +19,13 @@ namespace LibraryQA.Core.Services
         public IReadOnlyList<Dictionary<string, object>> Reservations { get; init; } = Array.Empty<Dictionary<string, object>>();
     }
 
-    // Member Lookup Service lets staff see one member's loans, overdue items and reservations (REQ-6).
-    // REQ-6 allows basic member information, with contact details for overdue follow-up, but not the
-    // full account record - so contact details are only returned while the member has overdue items.
+    // REQ-6: one member's loans, overdue items and reservations - basic details only, never the full
+    // account record, so contact details are returned only while something is overdue.
     public class MemberLookupService
     {
         private readonly string _connectionString;
 
-        public MemberLookupService(string connectionString) // Initialise Database Access Connection
+        public MemberLookupService(string connectionString) // Initialise database access
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }

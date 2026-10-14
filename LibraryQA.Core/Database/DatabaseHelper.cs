@@ -14,7 +14,7 @@ namespace LibraryQA.Core.Database
         private readonly string _connectionString;
         private SqliteConnection? _connection;
 
-        public DatabaseHelper(string connectionString) // Initializes a new instance of DatabaseHelper with the specified connection string.
+        public DatabaseHelper(string connectionString) // Store the connection string; the connection opens on first use
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
@@ -39,7 +39,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public void CloseConnection() // Closes the database connection if it is open
+        public void CloseConnection() // Close the connection if it is open
         {
             if (_connection != null && _connection.State == ConnectionState.Open)
             {
@@ -47,7 +47,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public int? GetAccountIdByUsername(string username) // Retrieves the account ID for a given username, returning null if not found or inactive
+        public int? GetAccountIdByUsername(string username) // Returns the account ID for a username, or null if there is no such account
         {
             OpenConnection();
 
@@ -56,7 +56,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
             SELECT AccountID 
             FROM Accounts 
-            WHERE Username = @username AND IsActive = 1";
+            WHERE Username = @username";
 
                 command.Parameters.AddWithValue("@username", username);
 
@@ -76,8 +76,7 @@ namespace LibraryQA.Core.Database
                     SELECT AccountID 
                     FROM Accounts 
                     WHERE Username = @username 
-                    AND PasswordHash = @passwordHash 
-                    AND IsActive = 1";
+                    AND PasswordHash = @passwordHash";
 
                 command.Parameters.AddWithValue("@username", username);
                 command.Parameters.AddWithValue("@passwordHash", passwordHash);
@@ -101,7 +100,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public string? GetAccountStatus(int accountId) // Retrieves the current AccountStatus ("Active" or "Suspended") for REQ-19/REQ-21
+        public string? GetAccountStatus(int accountId) // Returns the account's status: Active, Pending, Suspended or Locked
         {
             OpenConnection();
 
@@ -139,7 +138,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public int GetFailedLoginAttempts(int accountId) // Groundwork for REQ-21 (Login Lockout) - reads the current failed-attempt count
+        public int GetFailedLoginAttempts(int accountId) // REQ-21: the current failed-attempt count
         {
             OpenConnection();
 
@@ -153,7 +152,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public void IncrementFailedLoginAttempts(int accountId) // Groundwork for REQ-21 - call after a failed login attempt
+        public void IncrementFailedLoginAttempts(int accountId) // REQ-21: call after a failed login attempt
         {
             OpenConnection();
 
@@ -165,7 +164,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public void ResetFailedLoginAttempts(int accountId) // Groundwork for REQ-21 - call after a successful login
+        public void ResetFailedLoginAttempts(int accountId) // REQ-21: call after a successful login
         {
             OpenConnection();
 
@@ -186,7 +185,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT AccountID, Username, Role, FirstName, LastName, Email, PhoneNumber, CreatedDate, AccountStatus
                     FROM Accounts 
-                    WHERE AccountID = @accountId AND IsActive = 1";
+                    WHERE AccountID = @accountId";
 
                 command.Parameters.AddWithValue("@accountId", accountId);
 
@@ -213,7 +212,7 @@ namespace LibraryQA.Core.Database
             return null;
         }
 
-        public List<Dictionary<string, object>> GetAllMembers() // Gets all member accounts (any status), for staff selection lists and member management (REQ-19, "pick from a list" improvement)
+        public List<Dictionary<string, object>> GetAllMembers() // All member accounts, any status, for staff selection lists (REQ-19)
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -223,7 +222,7 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT AccountID, Username, FirstName, LastName, Email, PhoneNumber, AccountStatus, FailedLoginAttempts
                     FROM Accounts
-                    WHERE Role = 'Member' AND IsActive = 1
+                    WHERE Role = 'Member'
                     ORDER BY LastName, FirstName";
 
                 using (var reader = command.ExecuteReader())
@@ -260,7 +259,6 @@ namespace LibraryQA.Core.Database
                 command.CommandText = @"
                     SELECT AccountID, Username, FirstName, LastName, Role, Email, PhoneNumber, AccountStatus, FailedLoginAttempts
                     FROM Accounts
-                    WHERE IsActive = 1
                     ORDER BY AccountID";
 
                 using (var reader = command.ExecuteReader())
@@ -286,9 +284,8 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        // REQ-16: lets a screen check a username before the whole form is filled in. This is
-        // advisory only - CreateAccount re-checks inside its transaction, so a username taken
-        // between the two calls is still rejected.
+        // REQ-16: an advisory check so a screen can warn early. CreateAccount re-checks inside its
+        // transaction, so a username taken between the two calls is still rejected.
         public bool UsernameExists(string username)
         {
             OpenConnection();
@@ -369,7 +366,7 @@ namespace LibraryQA.Core.Database
 
         #region Book/Catalogue Operations
 
-        public List<Dictionary<string, object>> SearchCatalogue(string searchTerm) // Searches the catalogue for books matching the search term in title, author, or ISBN, returning a list of matching books
+        public List<Dictionary<string, object>> SearchCatalogue(string searchTerm) // Catalogue search across title, author and ISBN (REQ-1)
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -529,11 +526,9 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        // DEF-09: the caller supplies today's local date. SQLite's date('now') is UTC, which in
-        // New Zealand is up to a day behind, so loans could stay unflagged on the day they fell due.
-        // Overdue status and the day count both come from OverdueRules, so the member and staff
-        // views can never disagree (REQ-4, REQ-13).
-        public List<Dictionary<string, object>> GetActiveLoans(int memberId, DateTime? today = null) // Gets all active loans for a specific member, including overdue status and days overdue
+        // DEF-09: the caller supplies the local date, because SQLite's date('now') is UTC. Overdue
+        // status and the day count come from OverdueRules, so no two screens disagree (REQ-4, REQ-13).
+        public List<Dictionary<string, object>> GetActiveLoans(int memberId, DateTime? today = null) // A member's active loans, with overdue status and day count
         {
             OpenConnection();
             DateTime asAt = (today ?? DateTime.Today).Date;
@@ -612,7 +607,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        public int? CreateLoan(int bookId, int memberId, DateTime loanDate, DateTime dueDate) // Creates a new loan for a book, ensuring the book is available and updating its status to "On Loan"
+        public int? CreateLoan(int bookId, int memberId, DateTime loanDate, DateTime dueDate) // Issues a loan for an Available book and sets it On Loan (REQ-2a)
         {
             OpenConnection();
 
@@ -670,56 +665,98 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public int? CreateLoanRequest(int bookId, int memberId, DateTime loanDate, DateTime dueDate) // REQ-18: Creates a loan request held as "Pending" until a staff member approves or rejects it. Book status is not changed until approval.
+        public bool HasLiveLoan(int bookId) // DEF-21: true if a pending or active loan claims this book
         {
             OpenConnection();
 
-            using (var transaction = _connection!.BeginTransaction())
+            using (var command = _connection!.CreateCommand())
             {
-                using (var checkCommand = _connection.CreateCommand())
-                {
-                    checkCommand.Transaction = transaction;
-                    checkCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
-                    checkCommand.Parameters.AddWithValue("@bookId", bookId);
+                command.CommandText = @"
+                    SELECT COUNT(*)
+                    FROM Loans
+                    WHERE BookID = @bookId AND ReturnDate IS NULL AND Status IN ('Pending', 'Active')";
 
-                    var status = checkCommand.ExecuteScalar()?.ToString();
-                    if (status != "Available")
+                command.Parameters.AddWithValue("@bookId", bookId);
+
+                var result = command.ExecuteScalar();
+                return result != null && Convert.ToInt32(result) > 0;
+            }
+        }
+
+        public int? CreateLoanRequest(int bookId, int memberId, DateTime loanDate, DateTime dueDate) // REQ-18: a loan request held "Pending"; the book's status is unchanged until approval
+        {
+            OpenConnection();
+
+            try
+            {
+                using (var transaction = _connection!.BeginTransaction())
+                {
+                    using (var checkCommand = _connection.CreateCommand())
+                    {
+                        checkCommand.Transaction = transaction;
+                        checkCommand.CommandText = "SELECT Status FROM Books WHERE BookID = @bookId";
+                        checkCommand.Parameters.AddWithValue("@bookId", bookId);
+
+                        var status = checkCommand.ExecuteScalar()?.ToString();
+                        if (status != "Available")
+                        {
+                            transaction.Rollback();
+                            return null;
+                        }
+                    }
+
+                    // DEF-21: an Available book may already have someone else's pending request
+                    using (var liveLoanCommand = _connection.CreateCommand())
+                    {
+                        liveLoanCommand.Transaction = transaction;
+                        liveLoanCommand.CommandText = @"
+                            SELECT COUNT(*)
+                            FROM Loans
+                            WHERE BookID = @bookId AND ReturnDate IS NULL AND Status IN ('Pending', 'Active')";
+                        liveLoanCommand.Parameters.AddWithValue("@bookId", bookId);
+
+                        if (Convert.ToInt32(liveLoanCommand.ExecuteScalar()) > 0)
+                        {
+                            transaction.Rollback();
+                            return null;
+                        }
+                    }
+
+                    int? loanId;
+                    using (var command = _connection.CreateCommand())
+                    {
+                        command.Transaction = transaction;
+                        command.CommandText = @"
+                            INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, Status)
+                            VALUES (@bookId, @memberId, @loanDate, @dueDate, 'Pending');
+                            SELECT last_insert_rowid();";
+
+                        command.Parameters.AddWithValue("@bookId", bookId);
+                        command.Parameters.AddWithValue("@memberId", memberId);
+                        command.Parameters.AddWithValue("@loanDate", loanDate.ToString("yyyy-MM-dd"));
+                        command.Parameters.AddWithValue("@dueDate", dueDate.ToString("yyyy-MM-dd"));
+
+                        var result = command.ExecuteScalar();
+                        loanId = result != null ? Convert.ToInt32(result) : (int?)null;
+                    }
+
+                    if (loanId == null)
                     {
                         transaction.Rollback();
                         return null;
                     }
+
+                    transaction.Commit();
+                    return loanId;
                 }
-
-                int? loanId;
-                using (var command = _connection.CreateCommand())
-                {
-                    command.Transaction = transaction;
-                    command.CommandText = @"
-                        INSERT INTO Loans (BookID, MemberID, LoanDate, DueDate, Status)
-                        VALUES (@bookId, @memberId, @loanDate, @dueDate, 'Pending');
-                        SELECT last_insert_rowid();";
-
-                    command.Parameters.AddWithValue("@bookId", bookId);
-                    command.Parameters.AddWithValue("@memberId", memberId);
-                    command.Parameters.AddWithValue("@loanDate", loanDate.ToString("yyyy-MM-dd"));
-                    command.Parameters.AddWithValue("@dueDate", dueDate.ToString("yyyy-MM-dd"));
-
-                    var result = command.ExecuteScalar();
-                    loanId = result != null ? Convert.ToInt32(result) : (int?)null;
-                }
-
-                if (loanId == null)
-                {
-                    transaction.Rollback();
-                    return null;
-                }
-
-                transaction.Commit();
-                return loanId;
+            }
+            catch (SqliteException ex) when (ex.SqliteErrorCode == 19) // idx_loans_active_book - the book was claimed first
+            {
+                return null;
             }
         }
 
-        public bool ApproveLoan(int loanId) // REQ-18: Approves a pending loan request, activating it and updating the book's status to "On Loan"
+        public bool ApproveLoan(int loanId) // REQ-18: activates a pending loan and sets the book On Loan
         {
             OpenConnection();
 
@@ -729,7 +766,13 @@ namespace LibraryQA.Core.Database
                 using (var lookupCommand = _connection.CreateCommand())
                 {
                     lookupCommand.Transaction = transaction;
-                    lookupCommand.CommandText = "SELECT BookID FROM Loans WHERE LoanID = @loanId AND Status = 'Pending'";
+
+                    // DEF-21: the book must still be Available, not just the request still Pending
+                    lookupCommand.CommandText = @"
+                        SELECT L.BookID
+                        FROM Loans L
+                        JOIN Books B ON L.BookID = B.BookID
+                        WHERE L.LoanID = @loanId AND L.Status = 'Pending' AND B.Status = 'Available'";
                     lookupCommand.Parameters.AddWithValue("@loanId", loanId);
 
                     var result = lookupCommand.ExecuteScalar();
@@ -768,7 +811,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public bool RejectLoan(int loanId) // REQ-18: Rejects a pending loan request, closing it without changing the item's status
+        public bool RejectLoan(int loanId) // REQ-18: closes a pending loan request, leaving the item's status alone
         {
             OpenConnection();
 
@@ -819,7 +862,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        public Dictionary<string, object>? GetLoanById(int loanId) // Retrieves detailed information for a specific loan by its ID, including book and member details
+        public Dictionary<string, object>? GetLoanById(int loanId) // One loan with its book and member details
         {
             OpenConnection();
 
@@ -857,7 +900,7 @@ namespace LibraryQA.Core.Database
             return null;
         }
 
-        public bool ProcessReturn(int loanId, DateTime returnDate, string condition = "Good") // Processes the return of a loaned book, updating the loan record and restoring the book's status based on pending reservations
+        public bool ProcessReturn(int loanId, DateTime returnDate, string condition = "Good") // REQ-2b: closes the loan, records the condition, and restores the book's status
         {
             OpenConnection();
 
@@ -900,9 +943,8 @@ namespace LibraryQA.Core.Database
                     }
                 }
 
-                // Restore catalogue status: "reserved" if an approved reservation exists, otherwise "available"
-                // REQ-20: NotifiedDate is stamped here - this is when the item becomes available to the reserver,
-                // and starts the 5-day collection window.
+                // Reserved if a hold exists, otherwise Available. REQ-20: NotifiedDate is stamped here,
+                // which starts the reserver's 5-day collection window.
                 using (var reservationCheckCommand = _connection.CreateCommand())
                 {
                     reservationCheckCommand.Transaction = transaction;
@@ -940,7 +982,7 @@ namespace LibraryQA.Core.Database
         }
 
         // DEF-09: same local-date rule as GetActiveLoans, and the same day count via OverdueRules.
-        public List<Dictionary<string, object>> GetAllOverdueLoans(DateTime? today = null) // Retrieves all overdue loans, including member and book details, for staff reporting
+        public List<Dictionary<string, object>> GetAllOverdueLoans(DateTime? today = null) // All overdue loans with member and book details, for staff reporting (REQ-6)
         {
             OpenConnection();
             DateTime asAt = (today ?? DateTime.Today).Date;
@@ -988,7 +1030,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        public List<Dictionary<string, object>> GetAllActiveLoans() // Gets all currently active (unreturned) loans system-wide, for staff selection when processing a return (the "pick from a list" improvement)
+        public List<Dictionary<string, object>> GetAllActiveLoans() // Every active loan system-wide, for the Process-Return picker
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -1045,7 +1087,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public int? CreateReservation(int bookId, int memberId, DateTime reservationDate) // Creates a new reservation for a book, ensuring no active reservation exists for the same book
+        public int? CreateReservation(int bookId, int memberId, DateTime reservationDate) // Places a hold, provided the book has no active reservation (REQ-3)
         {
 
             if (HasActiveReservation(bookId)) // Check if reservation already exists
@@ -1078,7 +1120,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public int? CreateReservationRequest(int bookId, int memberId, DateTime reservationDate) // REQ-18: Creates a reservation request held as "Pending" until a staff member approves or rejects it
+        public int? CreateReservationRequest(int bookId, int memberId, DateTime reservationDate) // REQ-18: a reservation request held "Pending" until staff act
         {
             if (HasActiveReservation(bookId))
             {
@@ -1110,7 +1152,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public bool ApproveReservation(int reservationId) // REQ-18: Approves a pending reservation request, activating it. If the item is already available it is immediately held for the member (REQ-20 notification window starts now)
+        public bool ApproveReservation(int reservationId) // REQ-18: activates a pending hold; if the item is already free it is held now (REQ-20)
         {
             OpenConnection();
 
@@ -1179,7 +1221,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public bool RejectReservation(int reservationId) // REQ-18: Rejects a pending reservation request, closing it without changing the item's status
+        public bool RejectReservation(int reservationId) // REQ-18: closes a pending hold, leaving the item's status alone
         {
             OpenConnection();
 
@@ -1229,7 +1271,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        public int GetActiveOrPendingCount(int memberId) // REQ-18: Gets the combined count of active and pending loans/reservations for a member, used to enforce the request limit
+        public int GetActiveOrPendingCount(int memberId) // REQ-8, REQ-18: a member's active and pending items, counted against the limit
         {
             OpenConnection();
 
@@ -1247,7 +1289,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public List<Dictionary<string, object>> GetRejectedNotices(int memberId) // REQ-18: Gets rejected loan/reservation requests for a member, so they can be informed of the rejection
+        public List<Dictionary<string, object>> GetRejectedNotices(int memberId) // REQ-18: a member's rejected requests, so they can be told
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -1284,7 +1326,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        public List<Dictionary<string, object>> GetActiveReservations(int memberId) // Gets all active reservations for a specific member, including book details and reservation date
+        public List<Dictionary<string, object>> GetActiveReservations(int memberId) // A member's active reservations with book details
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -1292,7 +1334,7 @@ namespace LibraryQA.Core.Database
             using (var command = _connection!.CreateCommand())
             {
                 command.CommandText = @"
-                    SELECT R.ReservationID, R.BookID, B.Title, B.Author, R.ReservationDate, R.Status
+                    SELECT R.ReservationID, R.BookID, B.Title, B.Author, R.ReservationDate, R.Status, R.NotifiedDate
                     FROM Reservations R
                     JOIN Books B ON R.BookID = B.BookID
                     WHERE R.MemberID = @memberId AND R.FulfilledDate IS NULL AND R.Status IN ('Pending', 'Active')
@@ -1311,7 +1353,9 @@ namespace LibraryQA.Core.Database
                             ["Title"] = reader["Title"],
                             ["Author"] = reader["Author"],
                             ["ReservationDate"] = reader["ReservationDate"],
-                            ["Status"] = reader["Status"]
+                            ["Status"] = reader["Status"],
+                            // DEF-24: set once the item is waiting for this member, so a screen can say so
+                            ["NotifiedDate"] = reader["NotifiedDate"] ?? DBNull.Value
                         });
                     }
                 }
@@ -1320,7 +1364,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        public List<Dictionary<string, object>> GetAllActiveReservations()
+        public List<Dictionary<string, object>> GetAllActiveReservations() // Every active reservation, for the staff list
         {
             OpenConnection();
             var results = new List<Dictionary<string, object>>();
@@ -1329,7 +1373,7 @@ namespace LibraryQA.Core.Database
             {
                 command.CommandText = @"
                     SELECT R.ReservationID, R.BookID, B.Title, B.Author,
-                           R.MemberID, A.FirstName, A.LastName, R.ReservationDate, R.Status
+                           R.MemberID, A.FirstName, A.LastName, R.ReservationDate, R.Status, R.NotifiedDate
                     FROM Reservations R
                     JOIN Books B ON R.BookID = B.BookID
                     JOIN Accounts A ON R.MemberID = A.AccountID
@@ -1349,7 +1393,9 @@ namespace LibraryQA.Core.Database
                             ["MemberID"] = reader["MemberID"],
                             ["MemberName"] = $"{reader["FirstName"]} {reader["LastName"]}",
                             ["ReservationDate"] = reader["ReservationDate"],
-                            ["Status"] = reader["Status"]
+                            ["Status"] = reader["Status"],
+                            // DEF-24: set once the item is held and waiting for collection
+                            ["NotifiedDate"] = reader["NotifiedDate"] ?? DBNull.Value
                         });
                     }
                 }
@@ -1358,7 +1404,7 @@ namespace LibraryQA.Core.Database
             return results;
         }
 
-        public int GetTotalActiveReservationsCount()
+        public int GetTotalActiveReservationsCount() // Active reservation count for the dashboard (REQ-6)
         {
             OpenConnection();
 
@@ -1371,7 +1417,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public int? FulfillReservation(int reservationId, DateTime collectionDate, int loanPeriodDays) // Marks a reservation as fulfilled when the reserving member collects the held book, and issues the loan for it
+        public int? FulfillReservation(int reservationId, DateTime collectionDate, int loanPeriodDays) // REQ-3: the member collects a held book - closes the hold and issues the loan
         {
             OpenConnection();
 
@@ -1469,9 +1515,8 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        // REQ-20: an uncollected reservation is cancelled if the item has sat available/held for
-        // this member for more than `expiryDays` (default 5), counted from NotifiedDate - the date
-        // the item became available to them. The item's status then returns to "Available".
+        // REQ-20: cancels a hold left uncollected for more than expiryDays (default 5) from
+        // NotifiedDate, and returns the item to Available.
         public int ExpireReservations(DateTime? today = null, int expiryDays = 5)
         {
             OpenConnection();
@@ -1561,7 +1606,7 @@ namespace LibraryQA.Core.Database
                 stats["TotalReservations"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Total members
-                command.CommandText = "SELECT COUNT(*) FROM Accounts WHERE Role = 'Member' AND IsActive = 1";
+                command.CommandText = "SELECT COUNT(*) FROM Accounts WHERE Role = 'Member'";
                 stats["TotalMembers"] = Convert.ToInt32(command.ExecuteScalar());
 
                 // Total books in catalogue
@@ -1644,7 +1689,7 @@ namespace LibraryQA.Core.Database
 
         #region IDisposable Implementation
 
-        public void Dispose() // Ensure the database connection is properly closed and disposed of
+        public void Dispose() // Close and dispose the connection
         {
             CloseConnection();
             _connection?.Dispose();

@@ -11,7 +11,7 @@ namespace LibraryQA.Core.Database
     {
         private readonly string _connectionString;
 
-        public DatabaseSeeder(string databasePath) // Initializes a new instance of DatabaseSeeder for the specified database file
+        public DatabaseSeeder(string databasePath) // Store the path to the database file
         {
             if (databasePath == null)
             {
@@ -21,11 +21,8 @@ namespace LibraryQA.Core.Database
             _connectionString = $"Data Source={databasePath}";
         }
 
-        // DEF-15: reports whether the database has already been seeded.
-        // The caller uses this instead of "does the file exist", so a seed that failed part-way
-        // through is retried on the next launch rather than leaving an empty catalogue forever.
-        // Accounts is checked rather than Books because accounts are never deleted by the
-        // application, so an empty Accounts table can only mean the seed never completed.
+        // DEF-15: true if the database already holds data, checked instead of "does the file exist"
+        // so a part-finished seed is retried. Accounts is used because the app never deletes accounts.
         public bool HasSampleData()
         {
             try

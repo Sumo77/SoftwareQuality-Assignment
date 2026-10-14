@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="LibraryQA.Views.MemberView"
+<UserControl x:Class="LibraryQA.Views.MemberView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -19,7 +19,7 @@
 			Formatting is handled by UserMessage so it matches the other views. -->
 		<TextBlock x:Name="StatusText" DockPanel.Dock="Bottom" TextWrapping="Wrap" Margin="12,0,12,12" Visibility="Collapsed"/>
 
-		<TabControl Margin="12">
+		<TabControl x:Name="MemberTabs" Margin="12" SelectionChanged="MemberTabs_SelectionChanged">
 			<TabItem Header="Catalogue Search">
 				<StackPanel Margin="12">
 					<Grid>

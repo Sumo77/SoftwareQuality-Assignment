@@ -4,13 +4,8 @@ using System.Globalization;
 
 namespace LibraryQA.Core.Database
 {
-    // Generates a large catalogue so search performance can be measured against REQ-15.
-    //
-    // Used by the performance tests only; the application itself never calls this. Generated
-    // rows all carry the "GEN-" ISBN prefix so they can be told apart from the seeded sample
-    // catalogue and removed again afterwards.
-    //
-    // Generation is deterministic (fixed random seed), so two timing runs measure the same data.
+    // Generates a large catalogue for the REQ-15 performance tests; the application never calls it.
+    // Rows carry the "GEN-" ISBN prefix so they can be removed again, and generation is deterministic.
     public class PerformanceDataGenerator
     {
         public const string GeneratedIsbnPrefix = "GEN-";
@@ -59,7 +54,7 @@ namespace LibraryQA.Core.Database
 
         private readonly string _connectionString;
 
-        public PerformanceDataGenerator(string connectionString)
+        public PerformanceDataGenerator(string connectionString) // Initialise database access
         {
             _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
         }
@@ -138,7 +133,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        private static string BuildTitle(Random random)
+        private static string BuildTitle(Random random) // Build a plausible title from the word lists
         {
             // Titles are built from a small word list so a search term such as "the" reliably
             // matches a large share of the catalogue, which is the case worth timing.
@@ -149,7 +144,7 @@ namespace LibraryQA.Core.Database
                 Pick(TitleTails, random));
         }
 
-        private static string Pick(string[] options, Random random)
+        private static string Pick(string[] options, Random random) // Pick one option at random
         {
             return options[random.Next(options.Length)];
         }

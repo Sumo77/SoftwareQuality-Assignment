@@ -6,7 +6,8 @@ How to setup the application for use, run tests, and inspect the database.
 
 ## Prerequisites
 
-- **.NET 8 SDK** - using the cmd `dotnet --version` should return 8.x or higher.
+- **.NET 9 SDK** - using the cmd `dotnet --version` should return 9.0.2XX or higher.
+    - The projects target is .NET 8, however the newer SDK is needed to read the `.slnx` solution file.
 - **Windows** - the app uses Windows Presentation Foundation (WPF) and will not run on macOS or Linux
 - **Visual Studio 2022** (or any other compatible IDE)
 
@@ -17,8 +18,8 @@ How to setup the application for use, run tests, and inspect the database.
 **1. Clone and restore**
 
 ```bash
-git clone https://github.com/Sumo77/SoftwareQuality-Assignment1.git
-cd SoftwareQuality-Assignment1
+git clone https://github.com/Sumo77/SoftwareQuality-Assignment.git
+cd SoftwareQuality-Assignment
 dotnet restore
 ```
 
@@ -51,17 +52,17 @@ Full list for sign-in information is located in the root README.
 
 ## Setup (Visual Studio 2022)
 
-Requires Visual Studio 2022 version 17.8 or later, with the **.NET desktop
+Requires Visual Studio 2022 version 17.13 or later, with the **.NET desktop
 development** installed.
 
 **1. Clone the repository**
 
 In Visual Studio: **Git -> Clone Repository**, paste
-`https://github.com/Sumo77/SoftwareQuality-Assignment1.git`, pick a local folder
+`https://github.com/Sumo77/SoftwareQuality-Assignment.git`, pick a local folder
 and click **Clone**.
 
 Already have it locally? **File -> Open -> Project/Solution** and select
-`SoftwareQuality-Assignment1.slnx`.
+`SoftwareQuality-Assignment.slnx`.
 
 **2. Restore packages**
 
@@ -136,7 +137,7 @@ recreated and repopulated from the SQL scripts good as new.
 ## Troubleshooting - Section helped by AI Debugging
 
 **"The current .NET SDK does not support targeting .NET x"**
-You are on an older SDK. Install .NET 8 or later from
+You are on an older SDK. Install .NET 9 SDK (9.0.2XX or later) from
 https://dotnet.microsoft.com/download.
 
 **`FileNotFoundException: DatabaseSchema.sql`**
@@ -147,6 +148,9 @@ again. If it persists, check that the project's `.csproj` still has the
 **"Database is locked"**
 Something else has the file open - usually DB Browser, or a previous run of the
 app that did not close properly. Close it and try again.
+
+**"Could not reach the library database"**
+An older library.db from a previous build is missing the newer Accounts columns. The app only recreates the schema when the file is absent - delete library.db from the output folder and run again.
 
 **"UNIQUE constraint failed: Reservations.BookID"**
 Working as intended. The database is rejecting a second active reservation on a

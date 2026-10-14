@@ -1,16 +1,14 @@
-﻿using Microsoft.Data.Sqlite;
+using Microsoft.Data.Sqlite;
 using System;
 
 namespace LibraryQA.Core.Database
 {
-    // Catalogue maintenance (REQ-1: staff add, edit and remove catalogue records).
-    // Kept in its own file so it does not collide with other work in DatabaseHelper.cs.
-    // Book status is never written here: new books start as 'Available' through the schema
-    // default, and after that status only changes through loans and reservations (REQ-14).
+    // Catalogue maintenance (REQ-1). Book status is never written here: new books default to
+    // 'Available', and only loans and reservations change it afterwards (REQ-14).
     public partial class DatabaseHelper
     {
         public int? AddBook(string title, string author, string? isbn, string? publisher,
-            int? publicationYear, string? genre, string? description) // Adds a new book to the catalogue and returns its ID, or null if the database rejects it (e.g. duplicate ISBN)
+            int? publicationYear, string? genre, string? description) // Adds a book and returns its ID, or null if the ISBN is already in use
         {
             OpenConnection();
 
@@ -62,7 +60,7 @@ namespace LibraryQA.Core.Database
             }
         }
 
-        public bool DeleteBook(int bookId) // Deletes a book that is Available and has no loan or reservation records; the database refuses anything else
+        public bool DeleteBook(int bookId) // Deletes an Available book with no loan or reservation records
         {
             OpenConnection();
 
@@ -123,7 +121,7 @@ namespace LibraryQA.Core.Database
         }
 
         private static void AddBookParameters(SqliteCommand command, string title, string author, string? isbn,
-            string? publisher, int? publicationYear, string? genre, string? description)
+            string? publisher, int? publicationYear, string? genre, string? description) // Bind the book fields; blanks are stored as NULL
         {
             // Optional values are stored as NULL rather than empty text. This matters for ISBN: it is
             // UNIQUE, and a second empty-string ISBN would be rejected as a duplicate of the first.
